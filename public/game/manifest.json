@@ -1,0 +1,98 @@
+{
+  "stage": {
+    "width": 1536,
+    "height": 864
+  },
+  "sprites": {
+    "hornet": {
+      "file": "hornet.png",
+      "width": 512,
+      "height": 512,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "cols": 2,
+      "rows": 2
+    },
+    "enemy": {
+      "file": "enemy.png",
+      "width": 512,
+      "height": 512,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "cols": 2,
+      "rows": 2
+    },
+    "truck": {
+      "file": "truck.png",
+      "width": 512,
+      "height": 512,
+      "frameWidth": 256,
+      "frameHeight": 256,
+      "cols": 2,
+      "rows": 2
+    },
+    "bullet": {
+      "file": "bullet.png",
+      "width": 256,
+      "height": 256,
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "cols": 2,
+      "rows": 2
+    },
+    "bomb": {
+      "file": "bomb.png",
+      "width": 256,
+      "height": 256,
+      "frameWidth": 128,
+      "frameHeight": 128,
+      "cols": 2,
+      "rows": 2
+    },
+    "hit": {
+      "file": "hit.png",
+      "width": 320,
+      "height": 320,
+      "frameWidth": 160,
+      "frameHeight": 160,
+      "cols": 2,
+      "rows": 2
+    },
+    "blast": {
+      "file": "blast.png",
+      "width": 440,
+      "height": 440,
+      "frameWidth": 220,
+      "frameHeight": 220,
+      "cols": 2,
+      "rows": 2
+    },
+    "barn": {
+      "file": "barn.png",
+      "width": 320,
+      "height": 320,
+      "frameWidth": 320,
+      "frameHeight": 320,
+      "cols": 1,
+      "rows": 1
+    },
+    "silo": {
+      "file": "silo.png",
+      "width": 280,
+      "height": 280,
+      "frameWidth": 280,
+      "frameHeight": 280,
+      "cols": 1,
+      "rows": 1
+    },
+    "hay": {
+      "file": "hay.png",
+      "width": 220,
+      "height": 220,
+      "frameWidth": 220,
+      "frameHeight": 220,
+      "cols": 1,
+      "rows": 1
+    }
+  }
+}

@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #1a2330;
+  --color-surface: #243044;
+  --color-fg: #f3ede2;
+  --color-muted: #9aa6b2;
+  --color-primary: #e7e0d4;
+  --color-accent: #8fb7c9;
+  --color-border: #3a4656;
+  --color-danger: #c45c4a;
+  --font-display: "Teko", ui-sans-serif, sans-serif;
+  --font-sans: "Barlow", ui-sans-serif, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-xl: 24px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-quick: 150ms;
+  --motion-fast: 250ms;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    overflow: hidden;
+  }
+
+  body {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+.game-shell {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+}
+
+.game-root {
+  position: absolute;
+  inset: 0;
+}
+
+.game-root canvas {
+  display: block;
+  touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

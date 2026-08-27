@@ -1,0 +1,28 @@
+{
+  "name": "Heartland",
+  "stageCanvas": { "width": 1536, "height": 864 },
+  "horizonYFrac": 0.7,
+  "parallax": [
+    { "id": "sky", "file": "/game/sky.png", "scroll": 0.12, "depth": 0 },
+    { "id": "far", "file": "/game/far.png", "scroll": 0.28, "depth": 1 },
+    { "id": "mid", "file": "/game/mid.png", "scroll": 0.48, "depth": 2 },
+    { "id": "near", "file": "/game/near.png", "scroll": 0.72, "depth": 3 },
+    { "id": "foreground", "file": "/game/foreground.png", "scroll": 1.18, "depth": 90 }
+  ],
+  "collision": {
+    "heightmap": "/game/ground-heightmap.json",
+    "drawH": 168
+  },
+  "objects": [
+    { "id": "ground", "type": "terrain_chunk", "strategy": "platform_strip", "collision": "heightmap", "file": "/game/ground.png" },
+    { "id": "barn", "type": "tall_or_large_object", "strategy": "one_by_one", "collision": "none", "file": "/game/barn.png" },
+    { "id": "silo", "type": "tall_or_large_object", "strategy": "one_by_one", "collision": "none", "file": "/game/silo.png" },
+    { "id": "fence", "type": "wide_or_long_object", "strategy": "one_by_one", "collision": "none", "file": "/game/fence.png" },
+    { "id": "hay", "type": "compact_prop", "strategy": "one_by_one", "collision": "none", "file": "/game/hay.png" },
+    { "id": "truck", "type": "ground_target", "strategy": "sprite_sheet", "collision": "aabb", "file": "/game/truck.png" }
+  ],
+  "sceneHooks": {
+    "playerSpawn": { "x": 260, "y": 260 },
+    "camera": { "mode": "fixed-screen", "playerBand": [0.08, 0.4] }
+  }
+}

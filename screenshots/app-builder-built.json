@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Fight and Flight",
+      "hasCanvas": false,
+      "bodyTextLen": 166,
+      "bodyTextHash": "cde817aca285747038949019a364770a505c40b2164ed74928599bf05308a661",
+      "bodyTextPrefix": "ARCADE FLYER Fight and Flight Fight or flight? I choose both. Pl",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Fight and Flight",
+      "hasCanvas": false,
+      "bodyTextLen": 66,
+      "bodyTextHash": "34e1bcd4841cc925e18eb996e5e6bb412315440a83da80772c3f805186924a09",
+      "bodyTextPrefix": "ARCADE FLYER Fight and Flight Fight or flight? I choose both. Pl",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
