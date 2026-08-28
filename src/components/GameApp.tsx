@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type Phaser from "phaser";
+import { BriefingScreen } from "@/components/BriefingScreen";
 import { GameOverScreen } from "@/components/GameOverScreen";
 import { HangarScreen } from "@/components/HangarScreen";
 import { Hud } from "@/components/Hud";
 import { PauseScreen } from "@/components/PauseScreen";
 import { TitleScreen } from "@/components/TitleScreen";
 import { TouchControls } from "@/components/TouchControls";
+import { WorldSelect } from "@/components/WorldSelect";
 import { bridge } from "@/game/bridge";
 import { input } from "@/game/input";
 import { ART_REV } from "@/game/config";
@@ -83,10 +85,12 @@ export function GameApp() {
       <div ref={hostRef} id="game-root" className="game-root" />
       {phase === "booting" || phase === "title" ? <TitleScreen /> : null}
       {phase === "hangar" ? <HangarScreen /> : null}
+      {phase === "worlds" ? <WorldSelect /> : null}
+      {phase === "briefing" ? <BriefingScreen /> : null}
       {phase === "playing" || phase === "paused" ? <Hud /> : null}
       {phase === "playing" && showTouch ? <TouchControls /> : null}
       {phase === "paused" ? <PauseScreen /> : null}
-      {phase === "gameover" ? <GameOverScreen /> : null}
+      {phase === "results" ? <GameOverScreen /> : null}
     </div>
   );
 }

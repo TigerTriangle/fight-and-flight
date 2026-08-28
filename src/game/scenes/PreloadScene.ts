@@ -37,6 +37,14 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("aa", `/game/aa.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("radar", `/game/radar.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("bullet", `/game/bullet.png${v}`, {
       frameWidth: 128,
       frameHeight: 128,
@@ -85,6 +93,18 @@ export class PreloadScene extends Phaser.Scene {
       key: "truck-idle",
       frames: this.anims.generateFrameNumbers("truck", { start: 0, end: 3 }),
       frameRate: 6,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "aa-idle",
+      frames: this.anims.generateFrameNumbers("aa", { start: 0, end: 3 }),
+      frameRate: 7,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "radar-spin",
+      frames: this.anims.generateFrameNumbers("radar", { start: 0, end: 3 }),
+      frameRate: 8,
       repeat: -1,
     });
     this.anims.create({

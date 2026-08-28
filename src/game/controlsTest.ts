@@ -20,6 +20,11 @@ export type ControlsProbe = {
   getHeat?: () => number;
   getHot?: () => boolean;
   getPlane?: () => string;
+  getBeat?: () => string;
+  getMissionT?: () => number;
+  getAirTally?: () => number;
+  getGroundTally?: () => number;
+  skipTo?: (t: number) => void;
 };
 
 declare global {

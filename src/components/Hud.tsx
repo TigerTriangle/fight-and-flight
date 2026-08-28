@@ -1,15 +1,19 @@
-import { Pause } from "lucide-react";
+import { Bomb, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bridge } from "@/game/bridge";
+import { worldById } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
 
 export function Hud() {
   const hull = useGameStore((s) => s.hull);
   const hullMax = useGameStore((s) => s.hullMax);
   const bombs = useGameStore((s) => s.bombs);
+  const bombsMax = useGameStore((s) => s.bombsMax);
   const score = useGameStore((s) => s.score);
   const gunHeat = useGameStore((s) => s.gunHeat);
   const gunHot = useGameStore((s) => s.gunHot);
+  const worldName = worldById(useGameStore((s) => s.worldId)).name;
+  const beat = useGameStore((s) => s.beat);
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -26,6 +30,8 @@ export function Hud() {
             />
           ))}
         </div>
+        <p className="text-xs uppercase tracking-[0.14em] text-muted">{worldName}</p>
+        <p className="text-xs text-muted">{beat}</p>
         <p className="font-display text-2xl leading-none tabular-nums text-fg">
           {score.toLocaleString()}
         </p>
@@ -51,9 +57,21 @@ export function Hud() {
           <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
             Bombs
           </p>
-          <p className="font-display text-2xl leading-none tabular-nums text-fg">
-            {bombs}
-          </p>
+          <div
+            className="mt-1 flex max-w-20 flex-wrap gap-1"
+            aria-label={`${bombs} of ${bombsMax} bombs`}
+          >
+            {Array.from({ length: bombsMax }).map((_, i) => (
+              <Bomb
+                key={i}
+                className={`size-4 ${
+                  i < bombs ? "text-accent" : "text-muted/30"
+                }`}
+                strokeWidth={2.25}
+                aria-hidden
+              />
+            ))}
+          </div>
         </div>
         <Button
           data-ui

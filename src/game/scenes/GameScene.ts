@@ -3,7 +3,6 @@ import { audio } from "../audio";
 import { bridge } from "../bridge";
 import {
   AIR_KILLS_PER_CRATE,
-  AIR_STRETCH,
   BOMB_COOLDOWN,
   BOMB_CRATE_AT,
   BOMB_PICKUP,
@@ -11,18 +10,33 @@ import {
   GAME_HEIGHT,
   GAME_WIDTH,
   GROUND_DRAW_H,
-  GROUND_STRETCH,
   GUN_COOL_RATE,
   GUN_OVERHEAT_LOCK,
   INVULN_TIME,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
   PLAYER_Y_MIN,
-  SCORE_AIR,
-  SCORE_GROUND,
-  SCORE_LOW_CLIP,
   SCROLL_SPEED,
 } from "../config";
+import {
+  BEAT_LABEL,
+  MISSION,
+  PACKS,
+  SCORE_AA_BOMB,
+  SCORE_AIR,
+  SCORE_CLEAR,
+  SCORE_GROUND_BOMB,
+  SCORE_HEAVY,
+  SCORE_LOW_CLIP,
+  SCORE_SURVIVE_HULL,
+  SCORE_TANK_BOMB,
+  beatAt,
+  medalFor,
+  type AirKind,
+  type Beat,
+  type GroundKind,
+  type Pack,
+} from "../mission";
 import {
   Bomb,
   Bullet,
@@ -72,6 +86,12 @@ function asCrate(obj: unknown): CrateDrop | null {
   return null;
 }
 
+function asTruck(obj: unknown): Truck | null {
+  const s = asSprite(obj);
+  if (s && "ground" in s) return s as Truck;
+  return null;
+}
+
 export class GameScene extends Phaser.Scene {
   private mode: Mode = "attract";
   private worldX = 0;
@@ -89,6 +109,13 @@ export class GameScene extends Phaser.Scene {
   private stretchT = 0;
   private spawnT = 0;
   private decorT = 0;
+  private missionT = 0;
+  private beat: Beat = "intro";
+  private packI = 0;
+  private batteryOut = false;
+  private clearing = false;
+  private airTally = 0;
+  private groundTally = 0;
   private trauma = 0;
   private probeYaw = 0;
   private lastVx = 0;
@@ -137,6 +164,13 @@ export class GameScene extends Phaser.Scene {
     this.stretchT = 0;
     this.spawnT = 0;
     this.decorT = 0;
+    this.missionT = 0;
+    this.beat = "intro";
+    this.packI = 0;
+    this.batteryOut = false;
+    this.clearing = false;
+    this.airTally = 0;
+    this.groundTally = 0;
     this.trauma = 0;
     this.probeYaw = 0;
     this.lastVx = 0;
@@ -147,7 +181,7 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.hm = this.cache.json.get("heightmap") as Heightmap;
-    window.__fnfBuild = 9;
+    window.__fnfBuild = 10;
     this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.physics.world.gravity.y = 0;
 
@@ -192,12 +226,12 @@ export class GameScene extends Phaser.Scene {
     });
     this.enemies = this.physics.add.group({
       classType: EnemyFighter,
-      maxSize: 16,
+      maxSize: 24,
       runChildUpdate: true,
     });
     this.trucks = this.physics.add.group({
       classType: Truck,
-      maxSize: 12,
+      maxSize: 20,
       runChildUpdate: true,
     });
     this.crates = this.physics.add.group({
@@ -236,6 +270,11 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = asEnemy(e);
       if (enemy) this.ramAir(enemy);
+    });
+    this.physics.add.overlap(this.bullets, this.trucks, (a, b) => {
+      const bullet = asBullet(a) ?? asBullet(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (bullet && truck) this.hitGround(bullet, truck);
     });
     this.physics.add.overlap(this.player, this.trucks, () => this.hurt());
     this.physics.add.overlap(this.player, this.crates, (a, b) => {
@@ -280,6 +319,18 @@ export class GameScene extends Phaser.Scene {
       getHeat: () => this.gunHeat,
       getHot: () => this.overheat > 0,
       getPlane: () => this.loadout.id,
+      getBeat: () => this.beat,
+      getMissionT: () => this.missionT,
+      getAirTally: () => this.airTally,
+      getGroundTally: () => this.groundTally,
+      skipTo: (t: number) => {
+        this.missionT = t;
+        this.beat = beatAt(t);
+        this.packI = PACKS.findIndex((p) => p.t >= t - 0.05);
+        if (this.packI < 0) this.packI = PACKS.length;
+        this.batteryOut = this.beat === "battery";
+        this.syncHud();
+      },
     };
 
     if (this.mode === "play") this.beginRun();
@@ -318,6 +369,7 @@ export class GameScene extends Phaser.Scene {
       this.cratesFall();
       this.steerDarts();
       this.enemyGuns(dt);
+      this.groundGuns(dt);
       this.terrainKill();
     } else if (this.mode === "attract") {
       this.wavesDecor(dt);
@@ -392,13 +444,19 @@ export class GameScene extends Phaser.Scene {
     this.stretchT = 0;
     this.spawnT = 0;
     this.decorT = 0;
+    this.missionT = 0;
+    this.beat = "intro";
+    this.packI = 0;
+    this.batteryOut = false;
+    this.clearing = false;
+    this.airTally = 0;
+    this.groundTally = 0;
     this.trauma = 0;
     this.probeYaw = 0;
     this.lastVx = 0;
     this.lastVy = 0;
     this.forced.clear();
     input.setKeys([]);
-    this.airKills = 0;
     this.airKills = 0;
     this.clearEntities();
     this.beginRun();
@@ -673,7 +731,8 @@ export class GameScene extends Phaser.Scene {
     const blast = this.loadout.blast;
     for (const child of this.trucks.getChildren()) {
       const truck = child as Truck;
-      if (circleHits(x, y, truck, blast + 20)) this.killTruck(truck);
+      if (!circleHits(x, y, truck, blast + 20)) continue;
+      this.killTruck(truck);
     }
     for (const child of this.enemies.getChildren()) {
       const en = child as EnemyFighter;
@@ -684,38 +743,44 @@ export class GameScene extends Phaser.Scene {
   }
 
   private waves(dt: number) {
-    this.stretchT += dt;
-    this.spawnT += dt;
+    if (this.clearing || this.dead) {
+      this.reapDecor();
+      return;
+    }
+    this.missionT += dt;
     this.decorT += dt;
-    if (this.stretch === "air") {
-      if (this.spawnT >= 1.2) {
-        this.spawnT = 0;
-        this.spawnEnemy(false);
-      }
-      if (this.stretchT >= AIR_STRETCH) {
-        this.stretch = "ground";
-        this.stretchT = 0;
-        this.spawnT = 1.2;
-      }
-    } else {
-      if (this.spawnT >= 2.35) {
-        this.spawnT = 0;
-        this.spawnTruck();
-      }
-      if (this.stretchT > 4.6 && this.stretchT < 4.6 + dt + 0.02) {
-        this.spawnEnemy(true);
-      }
-      if (this.stretchT >= GROUND_STRETCH) {
-        this.stretch = "air";
-        this.stretchT = 0;
-        this.spawnT = 0.4;
+    const next = beatAt(this.missionT);
+    if (next !== this.beat) {
+      this.beat = next;
+      this.syncHud();
+    }
+    while (this.packI < PACKS.length && this.missionT >= PACKS[this.packI].t) {
+      this.firePack(PACKS[this.packI]);
+      this.packI += 1;
+    }
+    if (this.beat === "battery") {
+      const left = this.trucks.countActive(true);
+      if (this.batteryOut && left === 0 && this.missionT > MISSION.countyEnd + 10) {
+        this.finishMission();
       }
     }
+    if (this.missionT >= MISSION.end) this.finishMission();
+
     if (this.decorT > 3.4) {
       this.decorT = 0;
       this.spawnDecor();
     }
     this.reapDecor();
+  }
+
+  private firePack(pack: Pack) {
+    for (const a of pack.air ?? []) {
+      this.spawnEnemy(a.kind, a.y, a.dx ?? 0, a.speed);
+    }
+    for (const g of pack.ground ?? []) {
+      this.spawnTruck(g.kind, g.dx);
+    }
+    if (this.beat === "battery") this.batteryOut = true;
   }
 
   private wavesDecor(dt: number) {
@@ -727,24 +792,20 @@ export class GameScene extends Phaser.Scene {
     this.reapDecor();
   }
 
-  private spawnEnemy(low: boolean) {
-    const py = this.player?.active ? this.player.y : 260;
-    const y = low
-      ? Phaser.Math.Between(GAME_HEIGHT * 0.52, GAME_HEIGHT * 0.62)
-      : Math.random() < 0.6
-        ? Phaser.Math.Clamp(py + Phaser.Math.Between(-42, 42), 90, GAME_HEIGHT * 0.5)
-        : Phaser.Math.Between(80, GAME_HEIGHT * 0.48);
-    const speed = -(160 + Math.random() * 90);
-    const e = this.enemies.get(GAME_WIDTH + 70, y) as EnemyFighter | null;
-    e?.launch(GAME_WIDTH + 70, y, speed, low);
+  private spawnEnemy(kind: AirKind, y: number, dx = 0, speed?: number) {
+    const vx =
+      speed ??
+      (kind === "trainer" ? -(130 + Math.random() * 30) : kind === "heavy" ? -140 : -(185 + Math.random() * 50));
+    const e = this.enemies.get(GAME_WIDTH + 70 + dx, y) as EnemyFighter | null;
+    e?.launch(GAME_WIDTH + 70 + dx, y, vx, { kind });
   }
 
-  private spawnTruck() {
+  private spawnTruck(kind: GroundKind = "truck", dx = 0) {
     if (!this.hm) return;
-    const x = GAME_WIDTH + 90;
+    const x = GAME_WIDTH + 90 + dx;
     const y = groundY(this.worldX + x, this.hm) + 6;
     const t = this.trucks.get(x, y) as Truck | null;
-    t?.place(x, y, SCROLL_SPEED);
+    t?.place(x, y, SCROLL_SPEED, kind);
   }
 
   private spawnDecor() {
@@ -754,7 +815,8 @@ export class GameScene extends Phaser.Scene {
     ] as string;
     const x = GAME_WIDTH + 80 + Math.random() * 80;
     const gy = groundY(this.worldX + x, this.hm);
-    const img = this.add.image(x, gy + 8, pick).setOrigin(0.5, 1).setDepth(20);
+    const plant = pick === "barn" ? 44 : pick === "silo" ? 22 : 8;
+    const img = this.add.image(x, gy + plant, pick).setOrigin(0.5, 1).setDepth(20);
     if (pick === "barn") img.setScale(0.72);
     if (pick === "silo") img.setScale(0.7);
     if (pick === "hay") img.setScale(0.55);
@@ -776,14 +838,48 @@ export class GameScene extends Phaser.Scene {
   private enemyGuns(dt: number) {
     for (const child of this.enemies.getChildren()) {
       const en = child as EnemyFighter;
-      if (!en.active) continue;
+      if (!en.active || en.kind === "trainer") continue;
       en.fireAcc -= dt;
       if (en.fireAcc <= 0 && en.x < GAME_WIDTH - 40 && en.x > 280) {
-        en.fireAcc = 1.8 + Math.random() * 0.8;
+        en.fireAcc = en.kind === "heavy" ? 1.7 : 1.35 + Math.random() * 0.5;
         const b = this.eBullets.get(en.x - 40, en.y + 6) as Bullet | null;
         b?.fire(en.x - 40, en.y + 6, false);
       }
     }
+  }
+
+  private groundGuns(dt: number) {
+    for (const child of this.trucks.getChildren()) {
+      const truck = child as Truck;
+      if (!truck.active || truck.kind !== "aa") continue;
+      truck.fireAcc -= dt;
+      if (truck.fireAcc > 0 || truck.x > GAME_WIDTH - 30 || truck.x < 160) continue;
+      truck.fireAcc = 1.55;
+      const muzzleY = truck.y - 128;
+      const b = this.eBullets.get(truck.x - 10, muzzleY) as Bullet | null;
+      if (!b) continue;
+      b.fire(truck.x - 10, muzzleY, false);
+      const px = this.player?.x ?? 200;
+      const py = this.player?.y ?? 200;
+      const dx = px - (truck.x - 10);
+      const dy = py - muzzleY;
+      const mag = Math.hypot(dx, dy) || 1;
+      b.setVelocity((dx / mag) * 320, (dy / mag) * 320);
+    }
+  }
+
+  private hitGround(bullet: Bullet, truck: Truck) {
+    if (!bullet.active || !truck.active) return;
+    if (!bullet.fromPlayer) return;
+    bullet.disableBody(true, true);
+    truck.hp -= bullet.dmg;
+    truck.setTintFill(0xffffff);
+    this.time.delayedCall(40, () => {
+      if (truck.active) truck.clearTint();
+    });
+    this.playFx(truck.x, truck.y - 56, "hit");
+    audio.spark();
+    if (truck.hp <= 0) this.killTruck(truck);
   }
 
   private hitAir(bullet: Bullet, enemy: EnemyFighter) {
@@ -800,6 +896,14 @@ export class GameScene extends Phaser.Scene {
 
   private ramAir(enemy: EnemyFighter) {
     if (!enemy.active) return;
+    if (enemy.kind === "heavy") {
+      enemy.hp -= 1;
+      enemy.setTintFill(0xffffff);
+      this.time.delayedCall(40, () => enemy.clearTint());
+      this.hurt();
+      if (enemy.hp <= 0) this.killEnemy(enemy, false);
+      return;
+    }
     this.killEnemy(enemy, false);
     this.hurt();
   }
@@ -807,8 +911,14 @@ export class GameScene extends Phaser.Scene {
   private killEnemy(enemy: EnemyFighter, bombClip: boolean, fromGun = false) {
     if (!enemy.active) return;
     this.playFx(enemy.x, enemy.y, "hit");
+    const heavy = enemy.kind === "heavy";
     enemy.disableBody(true, true);
-    this.score += bombClip ? SCORE_AIR + SCORE_LOW_CLIP : SCORE_AIR;
+    this.score += heavy
+      ? SCORE_HEAVY
+      : bombClip
+        ? SCORE_AIR + SCORE_LOW_CLIP
+        : SCORE_AIR;
+    this.airTally += 1;
     if (fromGun) {
       this.airKills += 1;
       this.trySpawnCrate();
@@ -819,8 +929,11 @@ export class GameScene extends Phaser.Scene {
   private killTruck(truck: Truck) {
     if (!truck.active) return;
     this.playFx(truck.x, truck.y - 30, "blast");
+    const kind = truck.kind;
     truck.disableBody(true, true);
-    this.score += SCORE_GROUND;
+    this.score +=
+      kind === "tank" ? SCORE_TANK_BOMB : kind === "aa" ? SCORE_AA_BOMB : SCORE_GROUND_BOMB;
+    this.groundTally += 1;
     this.syncHud();
   }
 
@@ -846,7 +959,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private crash() {
-    if (this.dead) return;
+    if (this.dead || this.clearing) return;
     this.dead = true;
     this.playFx(this.player.x, this.player.y, "blast");
     this.player.disableBody(true, true);
@@ -857,7 +970,33 @@ export class GameScene extends Phaser.Scene {
     this.overTimer?.remove(false);
     this.overTimer = this.time.delayedCall(480, () => {
       if (!this.dead) return;
-      useGameStore.getState().recordScore(this.score);
+      useGameStore.getState().recordScore(this.score, {
+        cleared: false,
+        medal: medalFor(this.score),
+        airKills: this.airTally,
+        groundKills: this.groundTally,
+      });
+    });
+  }
+
+  private finishMission() {
+    if (this.dead || this.clearing) return;
+    this.clearing = true;
+    this.beat = "clear";
+    this.score += this.hull * SCORE_SURVIVE_HULL + SCORE_CLEAR;
+    this.syncHud();
+    audio.pickup();
+    this.overTimer?.remove(false);
+    this.overTimer = this.time.delayedCall(1100, () => {
+      if (this.dead) return;
+      this.player.disableBody(true, true);
+      audio.stopEngine();
+      useGameStore.getState().recordScore(this.score, {
+        cleared: true,
+        medal: medalFor(this.score),
+        airKills: this.airTally,
+        groundKills: this.groundTally,
+      });
     });
   }
 
@@ -875,9 +1014,11 @@ export class GameScene extends Phaser.Scene {
       hull: this.hull,
       hullMax: this.loadout.hull,
       bombs: this.bombs,
+      bombsMax: this.loadout.bombs,
       score: this.score,
       gunHeat: this.gunHeat,
       gunHot: this.overheat > 0,
+      beat: BEAT_LABEL[this.beat],
     });
   }
 }

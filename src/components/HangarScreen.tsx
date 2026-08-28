@@ -45,9 +45,7 @@ export function HangarScreen() {
 
   const takeoff = () => {
     audio.unlock();
-    useGameStore.getState().resetRun();
-    useGameStore.getState().setPhase("playing");
-    bridge.send("play");
+    useGameStore.getState().setPhase("worlds");
   };
 
   useEffect(() => {
@@ -129,7 +127,7 @@ export function HangarScreen() {
           className="min-h-14 flex-1 font-display text-2xl tracking-wide"
           onClick={takeoff}
         >
-          Takeoff
+          Theaters
         </Button>
         <Button
           variant="secondary"

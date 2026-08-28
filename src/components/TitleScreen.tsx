@@ -27,6 +27,9 @@ export function TitleScreen() {
         />
       </picture>
       <div className="relative mx-auto flex w-fit max-w-md flex-col items-center gap-3 rounded-[var(--radius-md)] border border-border/50 bg-bg/50 px-6 py-4 text-center">
+        <p className="max-w-xs font-sans text-sm leading-relaxed text-fg/90">
+          Fight or flight? I choose both.
+        </p>
         <Button
           size="lg"
           className="min-h-14 min-w-48 font-display text-2xl tracking-wide"

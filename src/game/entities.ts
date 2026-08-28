@@ -8,6 +8,7 @@ import {
   PLAYER_X_MAX,
   PLAYER_X_MIN,
 } from "./config";
+import { HP_AA, HP_TANK, HP_TRUCK } from "./mission";
 
 function bodyOf(sprite: Phaser.Physics.Arcade.Sprite) {
   return sprite.body as Phaser.Physics.Arcade.Body | null;
@@ -83,52 +84,141 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
   hp = 2;
   fireAcc = 0.6;
   low = false;
+  kind: "trainer" | "fighter" | "heavy" | "boss" = "fighter";
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "enemy");
   }
 
-  launch(x: number, y: number, speed: number, low: boolean) {
-    this.hp = 2;
-    this.low = low;
-    this.fireAcc = 0.4 + Math.random() * 0.8;
+  launch(
+    x: number,
+    y: number,
+    speed: number,
+    opts?: { low?: boolean; kind?: "trainer" | "fighter" | "heavy" | "boss" },
+  ) {
+    this.kind = opts?.kind ?? "fighter";
+    this.low = opts?.low ?? false;
+    this.hp = this.kind === "boss" ? 10 : this.kind === "heavy" ? 3 : this.kind === "trainer" ? 1 : 2;
+    this.fireAcc =
+      this.kind === "trainer" ? 99 : this.kind === "heavy" ? 1.1 : this.kind === "boss" ? 1.6 : 0.35 + Math.random() * 0.5;
     this.enableBody(true, x, y, true, true);
     this.setDepth(55);
-    this.setScale(0.58);
-    this.setVelocity(speed, (Math.random() - 0.5) * 30);
+    this.clearTint();
+    if (this.kind === "boss") {
+      this.setScale(1.18);
+      this.setTint(0xc9a07a);
+    } else if (this.kind === "heavy") {
+      this.setScale(0.78);
+      this.setTint(0xd08060);
+    } else if (this.kind === "trainer") {
+      this.setScale(0.5);
+      this.setTint(0xdde6ee);
+    } else {
+      this.setScale(0.58);
+    }
+    this.setVelocity(speed, this.kind === "boss" || this.kind === "heavy" ? 0 : (Math.random() - 0.5) * 36);
     this.play("enemy-fly", true);
-    bodyOf(this)?.setSize(220, 88).setOffset(18, 84);
+    const body = bodyOf(this);
+    if (this.kind === "boss") body?.setSize(230, 110).setOffset(12, 72);
+    else if (this.kind === "heavy") body?.setSize(226, 96).setOffset(14, 80);
+    else body?.setSize(220, 88).setOffset(18, 84);
   }
 
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     if (!this.active) return;
+    if (this.kind === "boss") {
+      if (this.x < 620) {
+        this.setVelocity(-8, Math.sin(time / 420) * 28);
+      }
+      return;
+    }
     if (this.x < -140) this.disableBody(true, true);
   }
 }
 
 export class Truck extends Phaser.Physics.Arcade.Sprite {
-  hp = 1;
+  hp = 4;
+  kind: "truck" | "tank" | "aa" = "truck";
+  fireAcc = 1.2;
+  ground = true;
+  private radar: Phaser.GameObjects.Sprite | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "truck");
+    this.once("destroy", () => this.clearRadar());
   }
 
-  place(x: number, y: number, scroll: number) {
-    this.hp = 1;
+  place(x: number, y: number, scroll: number, kind: "truck" | "tank" | "aa" = "truck") {
+    this.kind = kind;
+    this.hp = kind === "tank" ? HP_TANK : kind === "aa" ? HP_AA : HP_TRUCK;
+    this.fireAcc = 0.6 + Math.random() * 0.5;
     this.enableBody(true, x, y, true, true);
     this.setDepth(42);
-    this.setScale(0.52);
+    this.clearTint();
     this.setOrigin(0.5, 1);
     this.setVelocity(-scroll, 0);
-    this.play("truck-idle", true);
-    bodyOf(this)?.setSize(210, 90).setOffset(22, 150);
+    if (kind === "aa") {
+      this.setTexture("aa");
+      this.setScale(0.9);
+      this.play("aa-idle", true);
+      bodyOf(this)?.setSize(132, 210).setOffset(62, 38);
+      this.showRadar();
+    } else if (kind === "tank") {
+      this.hideRadar();
+      this.setTexture("truck");
+      this.setScale(0.72);
+      this.setTint(0x9a8a68);
+      this.play("truck-idle", true);
+      bodyOf(this)?.setSize(200, 120).setOffset(28, 128);
+    } else {
+      this.hideRadar();
+      this.setTexture("truck");
+      this.setScale(0.52);
+      this.play("truck-idle", true);
+      bodyOf(this)?.setSize(190, 118).setOffset(32, 130);
+    }
   }
 
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
-    if (!this.active) return;
-    if (this.x < -180) this.disableBody(true, true);
+    if (!this.active) {
+      this.hideRadar();
+      return;
+    }
+    this.placeRadar();
+    if (this.x < -240) this.disableBody(true, true);
+  }
+
+  disableBody(disableGameObject?: boolean, hideGameObject?: boolean) {
+    this.hideRadar();
+    return super.disableBody(disableGameObject, hideGameObject);
+  }
+
+  private showRadar() {
+    if (!this.radar) {
+      this.radar = this.scene.add.sprite(this.x, this.y, "radar", 0);
+      this.radar.setDepth(41);
+      this.radar.setOrigin(0.5, 1);
+    }
+    this.radar.setVisible(true);
+    this.radar.setScale(0.42);
+    this.radar.play("radar-spin", true);
+    this.placeRadar();
+  }
+
+  private placeRadar() {
+    if (!this.radar?.visible) return;
+    this.radar.setPosition(this.x + 108, this.y + 6);
+  }
+
+  private hideRadar() {
+    this.radar?.setVisible(false);
+  }
+
+  private clearRadar() {
+    this.radar?.destroy();
+    this.radar = null;
   }
 }
 
