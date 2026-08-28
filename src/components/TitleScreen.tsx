@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { audio } from "@/game/audio";
-import { bridge } from "@/game/bridge";
 import { useGameStore } from "@/game/store";
 
 export function TitleScreen() {
@@ -9,45 +8,41 @@ export function TitleScreen() {
 
   const play = () => {
     audio.unlock();
-    useGameStore.getState().resetRun();
-    useGameStore.getState().setPhase("playing");
-    bridge.send("play");
+    useGameStore.getState().setPhase("hangar");
   };
 
   return (
     <div
       data-ui
-      className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6 text-center"
+      className="absolute inset-0 z-20 flex flex-col justify-end px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-8 sm:pb-8"
     >
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(26,35,48,0.18)_0%,rgba(26,35,48,0.42)_70%,rgba(26,35,48,0.55)_100%)]" />
-      <div className="relative flex max-w-xl flex-col items-center gap-5 pt-[env(safe-area-inset-top)]">
-        <p className="font-display text-sm tracking-[0.28em] text-accent uppercase">
-          Arcade flyer
-        </p>
-        <h1 className="font-display text-6xl leading-[0.9] tracking-tight text-fg sm:text-7xl md:text-8xl">
-          Fight and Flight
-        </h1>
-        <p className="max-w-md font-sans text-lg italic text-muted sm:text-xl">
-          Fight or flight? I choose both.
-        </p>
-        <div className="mt-2 h-px w-24 bg-accent/70" />
+      <h1 className="sr-only">Fight and Flight</h1>
+      <picture className="pointer-events-none absolute inset-0">
+        <source media="(orientation: portrait)" srcSet="/title-mobile.jpg" />
+        <img
+          src="/title-desktop.jpg"
+          alt=""
+          className="size-full object-cover object-center"
+          decoding="async"
+        />
+      </picture>
+      <div className="relative mx-auto flex w-fit max-w-md flex-col items-center gap-3 rounded-[var(--radius-md)] border border-border/50 bg-bg/50 px-6 py-4 text-center">
         <Button
           size="lg"
-          className="mt-4 min-h-14 min-w-48 font-display text-2xl tracking-wide"
+          className="min-h-14 min-w-48 font-display text-2xl tracking-wide"
           onClick={play}
           disabled={!ready}
         >
           Play
         </Button>
         {highScore > 0 ? (
-          <p className="font-sans text-sm tabular-nums text-muted">
+          <p className="font-sans text-sm tabular-nums text-fg">
             Best {highScore.toLocaleString()}
           </p>
         ) : null}
-        <p className="mt-6 hidden max-w-sm text-xs leading-relaxed text-muted sm:block">
-          WASD or arrows to fly. Space or click to fire. Shift, F, or right-click
-          to bomb. When bombs run low, snag the parachute crate marked BOMB.
-          Stay off the dirt.
+        <p className="hidden max-w-xs text-xs leading-relaxed text-fg/80 sm:block">
+          WASD or arrows. Space to burst the guns — hold and they cook. Shift or F
+          to bomb.
         </p>
       </div>
     </div>

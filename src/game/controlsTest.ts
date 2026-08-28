@@ -17,6 +17,9 @@ export type ControlsProbe = {
   getCrates?: () => number;
   getAirKills?: () => number;
   spawnCrate?: () => void;
+  getHeat?: () => number;
+  getHot?: () => boolean;
+  getPlane?: () => string;
 };
 
 declare global {

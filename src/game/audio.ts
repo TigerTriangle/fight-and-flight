@@ -34,6 +34,16 @@ export class GameAudio {
     this.burst(0.03, 0.05, 1800);
   }
 
+  overheat() {
+    this.sweep(380, 140, 0.32, 0.09);
+    this.burst(0.14, 0.08, 700);
+  }
+
+  gunReady() {
+    this.blip(760, 0.05, 0.05, "square");
+    this.blip(1100, 0.06, 0.04, "triangle");
+  }
+
   bombDrop() {
     this.sweep(420, 140, 0.22, 0.08);
   }

@@ -159,6 +159,11 @@ def main() -> None:
 
     copies = {
         "hornet": SPR / "hornet" / "sheet-transparent.png",
+        "sparrow": SPR / "sparrow" / "sheet-transparent.png",
+        "thunderhog": SPR / "thunderhog" / "sheet-transparent.png",
+        "ghost": SPR / "ghost" / "sheet-transparent.png",
+        "leviathan": SPR / "leviathan" / "sheet-transparent.png",
+        "wisp": SPR / "wisp" / "sheet-transparent.png",
         "enemy": SPR / "enemy" / "sheet-transparent.png",
         "truck": SPR / "truck" / "sheet-transparent.png",
         "bullet": SPR / "bullet" / "sheet-transparent.png",

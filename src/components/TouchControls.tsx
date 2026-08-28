@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { input } from "@/game/input";
 import { bridge } from "@/game/bridge";
+import { useGameStore } from "@/game/store";
 import { cn } from "@/lib/utils";
 
 type Stick = { x: number; y: number };
@@ -9,6 +10,8 @@ export function TouchControls() {
   const baseRef = useRef<HTMLDivElement>(null);
   const [stick, setStick] = useState<Stick>({ x: 0, y: 0 });
   const [firing, setFiring] = useState(false);
+  const gunHeat = useGameStore((s) => s.gunHeat);
+  const gunHot = useGameStore((s) => s.gunHot);
   const pid = useRef<number | null>(null);
 
   useEffect(() => {
@@ -86,13 +89,15 @@ export function TouchControls() {
         </button>
         <button
           type="button"
-          aria-label="Fire guns"
+          aria-label={gunHot ? "Guns overheated" : "Fire guns"}
           aria-pressed={firing}
           className={cn(
-            "size-20 rounded-full border font-display text-xl tracking-wide active:scale-95",
-            firing
-              ? "border-primary bg-primary text-bg"
-              : "border-border bg-bg/80 text-fg",
+            "relative size-20 overflow-hidden rounded-full border font-display text-xl tracking-wide active:scale-95",
+            gunHot
+              ? "border-danger bg-danger/80 text-fg"
+              : firing
+                ? "border-primary bg-primary text-bg"
+                : "border-border bg-bg/80 text-fg",
           )}
           onPointerDown={(e) => {
             e.preventDefault();
@@ -106,7 +111,14 @@ export function TouchControls() {
           onPointerUp={() => setFire(false)}
           onPointerCancel={() => setFire(false)}
         >
-          Gun
+          <span
+            className={cn(
+              "pointer-events-none absolute inset-0 origin-bottom",
+              gunHot || gunHeat > 0.7 ? "bg-danger/50" : "bg-accent/40",
+            )}
+            style={{ transform: `scaleY(${gunHeat})` }}
+          />
+          <span className="relative">{gunHot ? "HOT" : "Gun"}</span>
         </button>
       </div>
       <button

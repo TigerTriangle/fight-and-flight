@@ -23,6 +23,12 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    for (const id of ["sparrow", "thunderhog", "ghost", "leviathan", "wisp"] as const) {
+      this.load.spritesheet(id, `/game/${id}.png${v}`, {
+        frameWidth: 256,
+        frameHeight: 256,
+      });
+    }
     this.load.spritesheet("enemy", `/game/enemy.png${v}`, {
       frameWidth: 256,
       frameHeight: 256,
@@ -58,9 +64,17 @@ export class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: "hornet-fly",
       frames: this.anims.generateFrameNumbers("hornet", { start: 0, end: 3 }),
-      frameRate: 10,
+      frameRate: 6,
       repeat: -1,
     });
+    for (const id of ["sparrow", "thunderhog", "ghost", "leviathan", "wisp"] as const) {
+      this.anims.create({
+        key: `${id}-fly`,
+        frames: this.anims.generateFrameNumbers(id, { start: 0, end: 3 }),
+        frameRate: 5,
+        repeat: -1,
+      });
+    }
     this.anims.create({
       key: "enemy-fly",
       frames: this.anims.generateFrameNumbers("enemy", { start: 0, end: 3 }),

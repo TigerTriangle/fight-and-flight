@@ -15,18 +15,29 @@ function bodyOf(sprite: Phaser.Physics.Arcade.Sprite) {
 
 export class Bullet extends Phaser.Physics.Arcade.Sprite {
   fromPlayer = true;
+  dmg = 1;
+  weave = 0;
+  weaveT = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "bullet");
   }
 
-  fire(x: number, y: number, fromPlayer: boolean) {
+  fire(
+    x: number,
+    y: number,
+    fromPlayer: boolean,
+    opts?: { dmg?: number; scale?: number; tint?: number; weave?: number },
+  ) {
     this.fromPlayer = fromPlayer;
+    this.dmg = fromPlayer ? (opts?.dmg ?? 1) : 1;
+    this.weave = fromPlayer ? (opts?.weave ?? 0) : 0;
+    this.weaveT = 0;
     this.enableBody(true, x, y, true, true);
     this.setDepth(70);
-    this.setScale(fromPlayer ? 0.34 : 0.3);
+    this.setScale(opts?.scale ?? (fromPlayer ? 0.34 : 0.3));
     this.setFlipX(!fromPlayer);
-    this.setTint(fromPlayer ? 0xffffff : 0xff8866);
+    this.setTint(opts?.tint ?? (fromPlayer ? 0xffffff : 0xff8866));
     this.setVelocity(fromPlayer ? BULLET_SPEED : -ENEMY_BULLET_SPEED, 0);
     this.play("bullet-fly", true);
     bodyOf(this)?.setSize(96, 36).setOffset(16, 46);
@@ -35,6 +46,10 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     if (!this.active) return;
+    if (this.weave > 0) {
+      this.weaveT += delta * 0.014;
+      this.setVelocityY(Math.sin(this.weaveT) * this.weave);
+    }
     if (this.x > 1360 || this.x < -80) this.disableBody(true, true);
   }
 }

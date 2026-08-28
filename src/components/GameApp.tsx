@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type Phaser from "phaser";
 import { GameOverScreen } from "@/components/GameOverScreen";
+import { HangarScreen } from "@/components/HangarScreen";
 import { Hud } from "@/components/Hud";
 import { PauseScreen } from "@/components/PauseScreen";
 import { TitleScreen } from "@/components/TitleScreen";
@@ -81,6 +82,7 @@ export function GameApp() {
     >
       <div ref={hostRef} id="game-root" className="game-root" />
       {phase === "booting" || phase === "title" ? <TitleScreen /> : null}
+      {phase === "hangar" ? <HangarScreen /> : null}
       {phase === "playing" || phase === "paused" ? <Hud /> : null}
       {phase === "playing" && showTouch ? <TouchControls /> : null}
       {phase === "paused" ? <PauseScreen /> : null}

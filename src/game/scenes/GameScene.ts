@@ -4,20 +4,17 @@ import { bridge } from "../bridge";
 import {
   AIR_KILLS_PER_CRATE,
   AIR_STRETCH,
-  BLAST_RADIUS,
   BOMB_COOLDOWN,
   BOMB_CRATE_AT,
-  BOMB_MAX,
   BOMB_PICKUP,
   BULLET_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
   GROUND_DRAW_H,
   GROUND_STRETCH,
-  GUN_COOLDOWN,
-  HULL_MAX,
+  GUN_COOL_RATE,
+  GUN_OVERHEAT_LOCK,
   INVULN_TIME,
-  PLAYER_SPEED,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
   PLAYER_Y_MIN,
@@ -36,6 +33,7 @@ import {
   circleHits,
 } from "../entities";
 import { input } from "../input";
+import { planeById, type PlaneDef } from "../planes";
 import { useGameStore } from "../store";
 import { groundY, type Heightmap } from "../terrain";
 
@@ -77,11 +75,14 @@ function asCrate(obj: unknown): CrateDrop | null {
 export class GameScene extends Phaser.Scene {
   private mode: Mode = "attract";
   private worldX = 0;
-  private hull = HULL_MAX;
-  private bombs = BOMB_MAX;
+  private loadout: PlaneDef = planeById("hornet");
+  private hull = 3;
+  private bombs = 4;
   private score = 0;
   private dead = false;
   private gunCd = 0;
+  private gunHeat = 0;
+  private overheat = 0;
   private bombCd = 0;
   private invuln = 0;
   private stretch: "air" | "ground" = "air";
@@ -122,11 +123,14 @@ export class GameScene extends Phaser.Scene {
     const phase = useGameStore.getState().phase;
     this.mode = data?.mode === "play" || phase === "playing" ? "play" : "attract";
     this.worldX = 0;
-    this.hull = HULL_MAX;
-    this.bombs = BOMB_MAX;
+    this.loadout = planeById(useGameStore.getState().planeId);
+    this.hull = this.loadout.hull;
+    this.bombs = this.loadout.bombs;
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
+    this.gunHeat = 0;
+    this.overheat = 0;
     this.bombCd = 0;
     this.invuln = 0;
     this.stretch = "air";
@@ -143,7 +147,7 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.hm = this.cache.json.get("heightmap") as Heightmap;
-    window.__fnfBuild = 7;
+    window.__fnfBuild = 9;
     this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT);
     this.physics.world.gravity.y = 0;
 
@@ -269,10 +273,13 @@ export class GameScene extends Phaser.Scene {
       getFps: () => this.game.loop.actualFps,
       getDead: () => this.dead,
       getPhase: () => useGameStore.getState().phase,
-      getBuild: () => 7,
+      getBuild: () => 8,
       getCrates: () => this.crates.countActive(true),
       getAirKills: () => this.airKills,
       spawnCrate: () => this.spawnCrate(),
+      getHeat: () => this.gunHeat,
+      getHot: () => this.overheat > 0,
+      getPlane: () => this.loadout.id,
     };
 
     if (this.mode === "play") this.beginRun();
@@ -309,6 +316,7 @@ export class GameScene extends Phaser.Scene {
       this.strikeAir();
       this.bombsFall();
       this.cratesFall();
+      this.steerDarts();
       this.enemyGuns(dt);
       this.terrainKill();
     } else if (this.mode === "attract") {
@@ -370,11 +378,14 @@ export class GameScene extends Phaser.Scene {
     this.overTimer = null;
     this.mode = "play";
     this.worldX = 0;
-    this.hull = HULL_MAX;
-    this.bombs = BOMB_MAX;
+    this.loadout = planeById(useGameStore.getState().planeId);
+    this.hull = this.loadout.hull;
+    this.bombs = this.loadout.bombs;
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
+    this.gunHeat = 0;
+    this.overheat = 0;
     this.bombCd = 0;
     this.invuln = 0;
     this.stretch = "air";
@@ -387,6 +398,7 @@ export class GameScene extends Phaser.Scene {
     this.lastVy = 0;
     this.forced.clear();
     input.setKeys([]);
+    this.airKills = 0;
     this.airKills = 0;
     this.clearEntities();
     this.beginRun();
@@ -409,12 +421,48 @@ export class GameScene extends Phaser.Scene {
   }
 
   private beginRun() {
+    this.applyLoadout();
     this.player.enableBody(true, 260, 260, true, true);
     this.player.setVisible(true);
     this.player.setVelocity(0, 0);
     this.player.setAlpha(1);
+    this.player.clearTint();
     audio.startEngine();
     this.syncHud();
+  }
+
+  private applyLoadout() {
+    const p = planeById(useGameStore.getState().planeId);
+    this.loadout = p;
+    this.hull = p.hull;
+    this.bombs = p.bombs;
+    this.player.setTexture(p.id);
+    this.player.setScale(p.scale);
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    body.setImmovable(true);
+    body.setSize(p.bodyW, p.bodyH).setOffset(p.bodyOx, p.bodyOy);
+    this.player.play(`${p.id}-fly`, true);
+    this.player.anims.pause();
+    this.player.setFrame(0);
+    this.player.setRotation(p.trim);
+  }
+
+  private poseCraft(moving: boolean, dt: number) {
+    const key = `${this.loadout.id}-fly`;
+    if (moving) {
+      if (!this.player.anims.isPlaying || this.player.anims.currentAnim?.key !== key) {
+        this.player.play(key, true);
+      }
+    } else if (this.player.anims.isPlaying) {
+      this.player.anims.stop();
+      this.player.setFrame(0);
+    }
+    const target = moving
+      ? Phaser.Math.Clamp(this.lastVy * 0.00105, -0.32, 0.32) + this.loadout.trim
+      : this.loadout.trim;
+    const k = 1 - Math.exp(-12 * dt);
+    this.player.setRotation(Phaser.Math.Linear(this.player.rotation, target, k));
   }
 
   private scrollBg() {
@@ -431,8 +479,8 @@ export class GameScene extends Phaser.Scene {
     if (actions.moveX < -0.05) this.probeYaw += 2.6 * dt;
     if (actions.moveX > 0.05) this.probeYaw -= 2.6 * dt;
 
-    this.lastVx = actions.moveX * PLAYER_SPEED;
-    this.lastVy = actions.moveY * PLAYER_SPEED;
+    this.lastVx = actions.moveX * this.loadout.speed;
+    this.lastVy = actions.moveY * this.loadout.speed;
     this.player.setVelocity(0, 0);
 
     let x = this.player.x + this.lastVx * dt;
@@ -446,7 +494,15 @@ export class GameScene extends Phaser.Scene {
     }
     y = Phaser.Math.Clamp(y, PLAYER_Y_MIN, gy - 36);
     this.player.setPosition(x, y);
-    this.player.setRotation(Phaser.Math.Clamp(this.lastVy * 0.00115, -0.38, 0.38));
+    this.poseCraft(Math.hypot(actions.moveX, actions.moveY) > 0.12, dt);
+
+    if (this.overheat > 0) {
+      this.player.setTint(0xff6a4a);
+    } else if (this.gunHeat > 0.7) {
+      this.player.setTint(0xffb080);
+    } else {
+      this.player.clearTint();
+    }
 
     if (this.invuln > 0) {
       this.invuln -= dt;
@@ -456,23 +512,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private combat(actions: ReturnType<typeof input.sample>, dt: number) {
-    if (actions.fire) {
-      this.gunCd -= dt;
-      let spread = 0;
-      while (this.gunCd <= 0) {
-        const bx = this.player.x + 70 + spread;
-        const b = this.bullets.get(bx, this.player.y + 8) as Bullet | null;
-        if (b) {
-          b.fire(bx, this.player.y + 8, true);
-          audio.gun();
-        }
-        this.gunCd += GUN_COOLDOWN;
-        spread += BULLET_SPEED * GUN_COOLDOWN * 0.35;
-        if (spread > 420) break;
-      }
-    } else {
-      this.gunCd = Math.max(0, this.gunCd - dt);
-    }
+    this.tickGun(actions.fire, dt);
     this.bombCd = Math.max(0, this.bombCd - dt);
     if (actions.bomb && this.bombCd <= 0 && this.bombs > 0) {
       this.bombCd = BOMB_COOLDOWN;
@@ -487,6 +527,57 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private tickGun(firing: boolean, dt: number) {
+    if (this.overheat > 0) {
+      this.overheat = Math.max(0, this.overheat - dt);
+      this.gunHeat = this.overheat / GUN_OVERHEAT_LOCK;
+      if (this.overheat <= 0) {
+        this.gunHeat = 0;
+        audio.gunReady();
+      }
+      this.syncHud();
+      return;
+    }
+    if (firing) {
+      this.gunCd -= dt;
+      let spread = 0;
+      const p = this.loadout;
+      while (this.gunCd <= 0) {
+        const bx = this.player.x + p.muzzle + spread;
+        const shot = (yOff: number) => {
+          const b = this.bullets.get(bx, this.player.y + 8 + yOff) as Bullet | null;
+          b?.fire(bx, this.player.y + 8 + yOff, true, {
+            dmg: p.gunDamage,
+            scale: p.bulletScale,
+            tint: p.bulletTint,
+            weave: p.weave,
+          });
+        };
+        if (p.twin) {
+          shot(-16);
+          shot(16);
+        } else {
+          shot(0);
+        }
+        audio.gun();
+        this.gunHeat = Math.min(1, this.gunHeat + p.heatPerShot);
+        this.gunCd += p.gunCd;
+        spread += BULLET_SPEED * p.gunCd * 0.35;
+        if (this.gunHeat >= 1) {
+          this.gunHeat = 1;
+          this.overheat = GUN_OVERHEAT_LOCK;
+          audio.overheat();
+          break;
+        }
+        if (spread > 420) break;
+      }
+    } else {
+      this.gunCd = Math.max(0, this.gunCd - dt);
+      this.gunHeat = Math.max(0, this.gunHeat - GUN_COOL_RATE * dt);
+    }
+    this.syncHud();
+  }
+
   private strikeAir() {
     for (const child of this.bullets.getChildren()) {
       const bullet = child as Bullet;
@@ -499,6 +590,29 @@ export class GameScene extends Phaser.Scene {
           break;
         }
       }
+    }
+  }
+
+  private steerDarts() {
+    const pull = this.loadout.homing;
+    if (pull <= 0) return;
+    for (const child of this.bullets.getChildren()) {
+      const b = child as Bullet;
+      if (!b.active || !b.fromPlayer) continue;
+      let best: EnemyFighter | null = null;
+      let bestD = 420;
+      for (const eChild of this.enemies.getChildren()) {
+        const en = eChild as EnemyFighter;
+        if (!en.active || en.x < b.x - 10) continue;
+        const d = Phaser.Math.Distance.Between(b.x, b.y, en.x, en.y);
+        if (d < bestD) {
+          bestD = d;
+          best = en;
+        }
+      }
+      if (!best) continue;
+      const vy = Phaser.Math.Clamp((best.y - b.y) * pull, -240, 240);
+      b.setVelocity(BULLET_SPEED, vy);
     }
   }
 
@@ -529,7 +643,8 @@ export class GameScene extends Phaser.Scene {
     if (this.mode !== "play" || this.dead) return;
     if (this.airKills < AIR_KILLS_PER_CRATE) return;
     if (this.crates.countActive(true) > 0) return;
-    if (this.bombs > BOMB_CRATE_AT) return;
+    if (this.bombs >= this.loadout.bombs) return;
+    if (this.loadout.bombs > 3 && this.bombs > BOMB_CRATE_AT) return;
     this.airKills = 0;
     this.spawnCrate();
   }
@@ -543,7 +658,7 @@ export class GameScene extends Phaser.Scene {
   private snagCrate(crate: CrateDrop) {
     if (!crate.active || this.dead) return;
     crate.disableBody(true, true);
-    this.bombs = Math.min(BOMB_MAX, this.bombs + BOMB_PICKUP);
+    this.bombs = Math.min(this.loadout.bombs, this.bombs + BOMB_PICKUP);
     this.playFx(this.player.x + 20, this.player.y, "hit");
     this.trauma = Math.min(1, this.trauma + 0.18);
     audio.pickup();
@@ -553,15 +668,16 @@ export class GameScene extends Phaser.Scene {
   private detonate(x: number, y: number, bomb: Bomb) {
     bomb.disableBody(true, true);
     this.playFx(x, y, "blast");
-    this.trauma = Math.min(1, this.trauma + 0.72);
+    this.trauma = Math.min(1, this.trauma + this.loadout.bombTrauma);
     audio.boom();
+    const blast = this.loadout.blast;
     for (const child of this.trucks.getChildren()) {
       const truck = child as Truck;
-      if (circleHits(x, y, truck, BLAST_RADIUS + 20)) this.killTruck(truck);
+      if (circleHits(x, y, truck, blast + 20)) this.killTruck(truck);
     }
     for (const child of this.enemies.getChildren()) {
       const en = child as EnemyFighter;
-      if (en.active && en.y > GAME_HEIGHT * 0.52 && circleHits(x, y, en, BLAST_RADIUS)) {
+      if (en.active && en.y > GAME_HEIGHT * 0.52 && circleHits(x, y, en, blast)) {
         this.killEnemy(en, true);
       }
     }
@@ -674,7 +790,7 @@ export class GameScene extends Phaser.Scene {
     if (!bullet.active || !enemy.active) return;
     if (!bullet.fromPlayer) return;
     bullet.disableBody(true, true);
-    enemy.hp -= 1;
+    enemy.hp -= bullet.dmg;
     enemy.setTintFill(0xffffff);
     this.time.delayedCall(40, () => enemy.clearTint());
     this.playFx(enemy.x, enemy.y, "hit");
@@ -757,8 +873,11 @@ export class GameScene extends Phaser.Scene {
   private syncHud() {
     useGameStore.getState().setHud({
       hull: this.hull,
+      hullMax: this.loadout.hull,
       bombs: this.bombs,
       score: this.score,
+      gunHeat: this.gunHeat,
+      gunHot: this.overheat > 0,
     });
   }
 }
