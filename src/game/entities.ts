@@ -16,6 +16,7 @@ function bodyOf(sprite: Phaser.Physics.Arcade.Sprite) {
 
 export class Bullet extends Phaser.Physics.Arcade.Sprite {
   fromPlayer = true;
+  fromAa = false;
   dmg = 1;
   weave = 0;
   weaveT = 0;
@@ -28,9 +29,10 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     x: number,
     y: number,
     fromPlayer: boolean,
-    opts?: { dmg?: number; scale?: number; tint?: number; weave?: number },
+    opts?: { dmg?: number; scale?: number; tint?: number; weave?: number; fromAa?: boolean },
   ) {
     this.fromPlayer = fromPlayer;
+    this.fromAa = !fromPlayer && !!opts?.fromAa;
     this.dmg = fromPlayer ? (opts?.dmg ?? 1) : 1;
     this.weave = fromPlayer ? (opts?.weave ?? 0) : 0;
     this.weaveT = 0;
@@ -94,7 +96,12 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
     x: number,
     y: number,
     speed: number,
-    opts?: { low?: boolean; kind?: "trainer" | "fighter" | "heavy" | "boss" },
+    opts?: {
+      low?: boolean;
+      kind?: "trainer" | "fighter" | "heavy" | "boss";
+      texture?: string;
+      anim?: string;
+    },
   ) {
     this.kind = opts?.kind ?? "fighter";
     this.low = opts?.low ?? false;
@@ -104,20 +111,21 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
     this.enableBody(true, x, y, true, true);
     this.setDepth(55);
     this.clearTint();
+    const tex = opts?.texture ?? "enemy";
+    if (this.texture.key !== tex) this.setTexture(tex);
     if (this.kind === "boss") {
       this.setScale(1.18);
       this.setTint(0xc9a07a);
     } else if (this.kind === "heavy") {
-      this.setScale(0.78);
-      this.setTint(0xd08060);
+      this.setScale(0.82);
     } else if (this.kind === "trainer") {
       this.setScale(0.5);
       this.setTint(0xdde6ee);
     } else {
-      this.setScale(0.58);
+      this.setScale(0.6);
     }
     this.setVelocity(speed, this.kind === "boss" || this.kind === "heavy" ? 0 : (Math.random() - 0.5) * 36);
-    this.play("enemy-fly", true);
+    this.play(opts?.anim ?? "enemy-fly", true);
     const body = bodyOf(this);
     if (this.kind === "boss") body?.setSize(230, 110).setOffset(12, 72);
     else if (this.kind === "heavy") body?.setSize(226, 96).setOffset(14, 80);
@@ -142,6 +150,7 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
   kind: "truck" | "tank" | "aa" = "truck";
   fireAcc = 1.2;
   ground = true;
+  ledge = 0;
   private radar: Phaser.GameObjects.Sprite | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -149,8 +158,23 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     this.once("destroy", () => this.clearRadar());
   }
 
-  place(x: number, y: number, scroll: number, kind: "truck" | "tank" | "aa" = "truck") {
+  place(
+    x: number,
+    y: number,
+    scroll: number,
+    kind: "truck" | "tank" | "aa" = "truck",
+    art?: {
+      truck: string;
+      tank: string;
+      aa: string;
+      truckAnim: string;
+      tankAnim: string;
+      aaAnim: string;
+      radar: boolean;
+    },
+  ) {
     this.kind = kind;
+    this.ledge = 0;
     this.hp = kind === "tank" ? HP_TANK : kind === "aa" ? HP_AA : HP_TRUCK;
     this.fireAcc = 0.6 + Math.random() * 0.5;
     this.enableBody(true, x, y, true, true);
@@ -158,24 +182,32 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     this.clearTint();
     this.setOrigin(0.5, 1);
     this.setVelocity(-scroll, 0);
+    const truckTex = art?.truck ?? "truck";
+    const tankTex = art?.tank ?? "truck";
+    const aaTex = art?.aa ?? "aa";
+    const truckAnim = art?.truckAnim ?? "truck-idle";
+    const tankAnim = art?.tankAnim ?? "truck-idle";
+    const aaAnim = art?.aaAnim ?? "aa-idle";
+    const useRadar = art?.radar ?? true;
     if (kind === "aa") {
-      this.setTexture("aa");
+      this.setTexture(aaTex);
       this.setScale(0.9);
-      this.play("aa-idle", true);
+      this.play(aaAnim, true);
       bodyOf(this)?.setSize(132, 210).setOffset(62, 38);
-      this.showRadar();
+      if (useRadar) this.showRadar();
+      else this.hideRadar();
     } else if (kind === "tank") {
       this.hideRadar();
-      this.setTexture("truck");
-      this.setScale(0.72);
-      this.setTint(0x9a8a68);
-      this.play("truck-idle", true);
+      this.setTexture(tankTex);
+      this.setScale(tankTex === "ship" ? 0.92 : 0.78);
+      if (tankTex === "truck") this.setTint(0x9a8a68);
+      this.play(tankAnim, true);
       bodyOf(this)?.setSize(200, 120).setOffset(28, 128);
     } else {
       this.hideRadar();
-      this.setTexture("truck");
-      this.setScale(0.52);
-      this.play("truck-idle", true);
+      this.setTexture(truckTex);
+      this.setScale(truckTex === "boat" ? 0.7 : 0.52);
+      this.play(truckAnim, true);
       bodyOf(this)?.setSize(190, 118).setOffset(32, 130);
     }
   }

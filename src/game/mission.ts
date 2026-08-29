@@ -1,3 +1,5 @@
+import type { WorldId } from "./worlds";
+
 export type Beat = "intro" | "trainers" | "county" | "battery" | "clear";
 
 export type AirKind = "trainer" | "fighter" | "heavy";
@@ -6,18 +8,21 @@ export type GroundKind = "truck" | "tank" | "aa";
 export type Pack = {
   t: number;
   air?: { kind: AirKind; y: number; dx?: number; speed?: number }[];
-  ground?: { kind: GroundKind; dx?: number }[];
+  ground?: { kind: GroundKind; dx?: number; ledge?: number }[];
 };
 
-export const MISSION = {
-  introEnd: 5,
-  trainersEnd: 20,
-  countyEnd: 140,
-  batteryEnd: 168,
-  end: 172,
+export type MissionDef = {
+  introEnd: number;
+  trainersEnd: number;
+  countyEnd: number;
+  batteryEnd: number;
+  end: number;
+  packs: Pack[];
+  medals: { bronze: number; silver: number; gold: number };
+  beats: Record<Beat, string>;
 };
 
-export const PACKS: Pack[] = [
+const HEARTLAND_PACKS: Pack[] = [
   { t: 6, air: [{ kind: "trainer", y: 180 }, { kind: "trainer", y: 260, dx: 80 }] },
   { t: 11, air: [{ kind: "trainer", y: 210 }] },
   { t: 16, air: [{ kind: "trainer", y: 140 }, { kind: "trainer", y: 300, dx: 90 }] },
@@ -71,6 +76,139 @@ export const PACKS: Pack[] = [
   { t: 166, ground: [{ kind: "aa" }] },
 ];
 
+const TIDEFRONT_PACKS: Pack[] = [
+  { t: 6, air: [{ kind: "trainer", y: 200 }, { kind: "trainer", y: 280, dx: 70 }] },
+  { t: 12, air: [{ kind: "trainer", y: 230 }] },
+  { t: 18, air: [{ kind: "trainer", y: 160 }, { kind: "trainer", y: 300, dx: 80 }] },
+
+  { t: 22, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 190 }] },
+  { t: 26, ground: [{ kind: "truck", dx: 80 }] },
+  { t: 30, ground: [{ kind: "tank" }], air: [{ kind: "fighter", y: 150 }, { kind: "fighter", y: 270, dx: 80 }] },
+  { t: 34, ground: [{ kind: "truck" }] },
+  { t: 38, air: [{ kind: "fighter", y: 150 }, { kind: "fighter", y: 250, dx: 90 }, { kind: "fighter", y: 330, dx: 40 }] },
+  { t: 44, ground: [{ kind: "aa" }], air: [{ kind: "fighter", y: 210 }] },
+  { t: 48, ground: [{ kind: "truck" }] },
+  { t: 52, ground: [{ kind: "truck", dx: 70 }], air: [{ kind: "fighter", y: 170 }, { kind: "fighter", y: 300, dx: 70 }] },
+  { t: 56, ground: [{ kind: "tank" }] },
+  { t: 62, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 230 }] },
+  { t: 66, ground: [{ kind: "aa" }] },
+  { t: 70, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 160 }, { kind: "fighter", y: 280, dx: 90 }] },
+  { t: 74, air: [{ kind: "heavy", y: 210 }, { kind: "fighter", y: 140, dx: 100 }] },
+  { t: 80, ground: [{ kind: "tank" }] },
+  { t: 84, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 200 }] },
+  { t: 88, ground: [{ kind: "aa" }] },
+  { t: 92, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 140 }, { kind: "fighter", y: 260, dx: 80 }] },
+  { t: 96, ground: [{ kind: "tank" }] },
+  { t: 102, air: [{ kind: "fighter", y: 130 }, { kind: "fighter", y: 220, dx: 60 }, { kind: "fighter", y: 310, dx: 110 }] },
+  { t: 108, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 240 }] },
+  { t: 112, ground: [{ kind: "aa" }] },
+  { t: 116, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 180 }, { kind: "fighter", y: 300, dx: 70 }] },
+  { t: 120, ground: [{ kind: "tank" }] },
+  { t: 126, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 210 }] },
+  { t: 130, ground: [{ kind: "truck", dx: 90 }] },
+  { t: 134, ground: [{ kind: "aa" }] },
+  { t: 140, air: [{ kind: "fighter", y: 180 }, { kind: "fighter", y: 280, dx: 70 }] },
+  { t: 146, ground: [{ kind: "tank" }], air: [{ kind: "fighter", y: 150 }] },
+  { t: 150, ground: [{ kind: "aa" }] },
+  { t: 154, ground: [{ kind: "truck" }], air: [{ kind: "fighter", y: 250 }, { kind: "fighter", y: 330, dx: 60 }] },
+  { t: 158, ground: [{ kind: "tank" }] },
+  { t: 162, ground: [{ kind: "aa" }], air: [{ kind: "fighter", y: 200 }] },
+  { t: 166, ground: [{ kind: "truck" }] },
+];
+
+const CANYON_PACKS: Pack[] = [
+  { t: 6, air: [{ kind: "trainer", y: 300 }, { kind: "trainer", y: 360, dx: 70 }] },
+  { t: 12, air: [{ kind: "trainer", y: 320 }] },
+  { t: 18, air: [{ kind: "trainer", y: 280 }, { kind: "trainer", y: 370, dx: 80 }] },
+
+  { t: 22, air: [{ kind: "fighter", y: 310 }] },
+  { t: 26, ground: [{ kind: "truck" }] },
+  { t: 30, air: [{ kind: "fighter", y: 290 }, { kind: "fighter", y: 360, dx: 80 }] },
+  { t: 36, ground: [{ kind: "aa" }] },
+  { t: 40, air: [{ kind: "fighter", y: 310 }] },
+  { t: 44, ground: [{ kind: "tank" }] },
+  { t: 48, air: [{ kind: "fighter", y: 280 }, { kind: "fighter", y: 330, dx: 60 }, { kind: "fighter", y: 380, dx: 120 }] },
+  { t: 56, ground: [{ kind: "truck" }] },
+  { t: 60, air: [{ kind: "heavy", y: 320 }, { kind: "fighter", y: 280, dx: 90 }] },
+  { t: 66, ground: [{ kind: "aa" }] },
+  { t: 70, air: [{ kind: "fighter", y: 340 }] },
+  { t: 74, ground: [{ kind: "truck" }] },
+  { t: 78, air: [{ kind: "fighter", y: 290 }, { kind: "fighter", y: 370, dx: 70 }] },
+  { t: 84, ground: [{ kind: "tank" }] },
+  { t: 88, air: [{ kind: "fighter", y: 310 }] },
+  { t: 92, ground: [{ kind: "aa" }] },
+  { t: 96, air: [{ kind: "fighter", y: 280, speed: -210 }, { kind: "fighter", y: 330, dx: 50 }, { kind: "fighter", y: 380, dx: 30 }] },
+  { t: 104, ground: [{ kind: "truck" }] },
+  { t: 108, air: [{ kind: "heavy", y: 310 }] },
+  { t: 112, air: [{ kind: "fighter", y: 290 }, { kind: "fighter", y: 360, dx: 80 }] },
+  { t: 118, ground: [{ kind: "aa" }] },
+  { t: 122, air: [{ kind: "fighter", y: 320 }] },
+  { t: 126, ground: [{ kind: "truck" }] },
+  { t: 130, air: [{ kind: "fighter", y: 280 }, { kind: "fighter", y: 350, dx: 70 }] },
+  { t: 136, ground: [{ kind: "aa" }] },
+  { t: 142, air: [{ kind: "fighter", y: 310 }] },
+  { t: 146, ground: [{ kind: "tank" }] },
+  { t: 150, air: [{ kind: "heavy", y: 300 }, { kind: "fighter", y: 360, dx: 80 }] },
+  { t: 154, ground: [{ kind: "aa" }] },
+  { t: 158, air: [{ kind: "fighter", y: 330 }] },
+  { t: 162, ground: [{ kind: "truck" }] },
+  { t: 166, ground: [{ kind: "aa" }] },
+];
+
+export const MISSIONS: Record<"heartland" | "tidefront" | "canyon", MissionDef> = {
+  heartland: {
+    introEnd: 5,
+    trainersEnd: 20,
+    countyEnd: 140,
+    batteryEnd: 168,
+    end: 172,
+    packs: HEARTLAND_PACKS,
+    medals: { bronze: 2800, silver: 5600, gold: 8800 },
+    beats: {
+      intro: "Takeoff",
+      trainers: "Air trainers",
+      county: "County",
+      battery: "Battery",
+      clear: "Clear",
+    },
+  },
+  tidefront: {
+    introEnd: 5,
+    trainersEnd: 20,
+    countyEnd: 138,
+    batteryEnd: 168,
+    end: 172,
+    packs: TIDEFRONT_PACKS,
+    medals: { bronze: 3400, silver: 6800, gold: 10200 },
+    beats: {
+      intro: "Launch",
+      trainers: "Coast trainers",
+      county: "Sea lanes",
+      battery: "Harbor guns",
+      clear: "Clear",
+    },
+  },
+  canyon: {
+    introEnd: 5,
+    trainersEnd: 20,
+    countyEnd: 140,
+    batteryEnd: 168,
+    end: 172,
+    packs: CANYON_PACKS,
+    medals: { bronze: 2600, silver: 5200, gold: 8400 },
+    beats: {
+      intro: "Drop in",
+      trainers: "Slot trainers",
+      county: "The Narrows",
+      battery: "Rim battery",
+      clear: "Clear",
+    },
+  },
+};
+
+export const MISSION = MISSIONS.heartland;
+export const PACKS = HEARTLAND_PACKS;
+
 export const SCORE_AIR = 150;
 export const SCORE_LOW_CLIP = 80;
 export const SCORE_HEAVY = 280;
@@ -90,25 +228,26 @@ export const MEDAL_SILVER = 5600;
 export const MEDAL_GOLD = 8800;
 
 export type Medal = "none" | "bronze" | "silver" | "gold";
+export type EndCause = "air" | "aa" | "ground" | "ram" | "obstacle" | "clear";
 
-export function medalFor(score: number): Medal {
-  if (score >= MEDAL_GOLD) return "gold";
-  if (score >= MEDAL_SILVER) return "silver";
-  if (score >= MEDAL_BRONZE) return "bronze";
+export function missionFor(id: string | undefined | null): MissionDef {
+  if (id === "tidefront" || id === "canyon") return MISSIONS[id];
+  return MISSIONS.heartland;
+}
+
+export function medalFor(score: number, worldId?: WorldId | string): Medal {
+  const m = missionFor(worldId).medals;
+  if (score >= m.gold) return "gold";
+  if (score >= m.silver) return "silver";
+  if (score >= m.bronze) return "bronze";
   return "none";
 }
 
-export function beatAt(t: number): Beat {
-  if (t < MISSION.introEnd) return "intro";
-  if (t < MISSION.trainersEnd) return "trainers";
-  if (t < MISSION.countyEnd) return "county";
+export function beatAt(t: number, mission: MissionDef = MISSIONS.heartland): Beat {
+  if (t < mission.introEnd) return "intro";
+  if (t < mission.trainersEnd) return "trainers";
+  if (t < mission.countyEnd) return "county";
   return "battery";
 }
 
-export const BEAT_LABEL: Record<Beat, string> = {
-  intro: "Takeoff",
-  trainers: "Air trainers",
-  county: "County",
-  battery: "Battery",
-  clear: "Clear",
-};
+export const BEAT_LABEL: Record<Beat, string> = MISSIONS.heartland.beats;

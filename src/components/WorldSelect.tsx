@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WORLDS, worldById, type WorldId } from "@/game/worlds";
+import { WORLDS, isWorldOpen, worldById, type WorldId } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
 import { cn } from "@/lib/utils";
 
 export function WorldSelect() {
   const worldId = useGameStore((s) => s.worldId);
+  const clearedWorlds = useGameStore((s) => s.clearedWorlds);
   const selected = worldById(worldId);
 
   const pick = (id: WorldId, open: boolean) => {
@@ -30,7 +31,9 @@ export function WorldSelect() {
       if (e.code === "Enter") {
         e.preventDefault();
         const w = worldById(useGameStore.getState().worldId);
-        if (w.open) useGameStore.getState().setPhase("briefing");
+        if (isWorldOpen(w.id, useGameStore.getState().clearedWorlds)) {
+          useGameStore.getState().setPhase("briefing");
+        }
       }
       if (e.code === "Escape") back();
     };
@@ -55,16 +58,17 @@ export function WorldSelect() {
       <div className="mx-auto mt-3 grid min-h-0 w-full max-w-2xl flex-1 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
         {WORLDS.map((w) => {
           const active = w.id === selected.id;
+          const open = isWorldOpen(w.id, clearedWorlds);
           return (
             <button
               key={w.id}
               type="button"
               aria-current={active}
-              aria-disabled={!w.open}
-              onClick={() => pick(w.id, w.open)}
+              aria-disabled={!open}
+              onClick={() => pick(w.id, open)}
               className={cn(
                 "flex min-h-14 items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left",
-                w.open
+                open
                   ? active
                     ? "border-accent bg-surface"
                     : "border-border bg-surface/80 hover:bg-surface"
@@ -74,7 +78,7 @@ export function WorldSelect() {
               <span
                 className={cn(
                   "w-8 shrink-0 font-display text-2xl leading-none tabular-nums",
-                  w.open ? "text-fg" : "text-muted/70",
+                  open ? "text-fg" : "text-muted/70",
                 )}
               >
                 {String(w.index).padStart(2, "0")}
@@ -83,20 +87,22 @@ export function WorldSelect() {
                 <span
                   className={cn(
                     "block font-display text-2xl leading-none tracking-tight",
-                    w.open ? "text-fg" : "text-muted",
+                    open ? "text-fg" : "text-muted",
                   )}
                 >
                   {w.name}
                 </span>
                 <span className="mt-1 block text-xs text-muted">
-                  {w.open
+                  {open
                     ? w.placeholder
                       ? `${w.tag} · Coming online`
                       : w.tag
-                    : "Clear the previous theater."}
+                    : w.id === "peaks"
+                      ? "Clear Red Canyon."
+                      : "Clear the previous theater."}
                 </span>
               </span>
-              {!w.open ? <Lock className="size-4 shrink-0 text-muted" aria-hidden /> : null}
+              {!open ? <Lock className="size-4 shrink-0 text-muted" aria-hidden /> : null}
             </button>
           );
         })}

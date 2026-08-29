@@ -20,6 +20,36 @@ export type WorldDef = {
   briefing: string;
 };
 
+export type DecorProp = { key: string; scale: number; plant: number; depth?: number };
+
+export type StageKit = {
+  sky: string;
+  far: string;
+  mid: string;
+  near: string;
+  ground: string;
+  fg: string;
+  ceiling?: string;
+  heightmap: string;
+  ceilingmap?: string;
+  enemy: string;
+  enemyAnim: string;
+  truck: string;
+  tank: string;
+  aa: string;
+  truckAnim: string;
+  tankAnim: string;
+  aaAnim: string;
+  radar: boolean;
+  decor: DecorProp[];
+  decorEvery?: number;
+  groundDrawH: number;
+  yMin: number;
+  startY: number;
+  airMin: number;
+  airMax: number;
+};
+
 export const WORLDS: WorldDef[] = [
   {
     id: "heartland",
@@ -37,9 +67,9 @@ export const WORLDS: WorldDef[] = [
     name: "Tidefront",
     tag: "coast / sea",
     open: true,
-    placeholder: true,
+    placeholder: false,
     briefing:
-      "The coast is on the board, but the charts are still wet. You fly the Heartland sky under a sea-lane callsign until Tidefront comes online. Sink what you can.",
+      "Bright water and cliff walls. Sink the patrol boats and the bigger hulls — bombs earn their keep here. Air stays thin except the fighter sweeps. Clip those sweeps if you want your racks refilled.",
   },
   {
     id: "canyon",
@@ -47,9 +77,9 @@ export const WORLDS: WorldDef[] = [
     name: "Red Canyon",
     tag: "desert rock",
     open: true,
-    placeholder: true,
+    placeholder: false,
     briefing:
-      "Red walls aren't painted yet. Sortie on the Heartland chart as if silos were canyon rim. Clear the air, then the ground.",
+      "Slot canyon. Mesas pinch the sky. Fly the gap, gun the interceptors in the slot, and bomb the ledge guns on the rim. Do not kiss the rock.",
   },
   {
     id: "peaks",
@@ -58,7 +88,7 @@ export const WORLDS: WorldDef[] = [
     tag: "alpine",
     open: false,
     placeholder: true,
-    briefing: "",
+    briefing: "Charts stop at the tree line. High Peaks is still being painted.",
   },
   {
     id: "canopy",
@@ -120,4 +150,111 @@ export const DEFAULT_WORLD: WorldId = "heartland";
 
 export function worldById(id: string | undefined | null): WorldDef {
   return WORLDS.find((w) => w.id === id) ?? WORLDS[0];
+}
+
+export function isWorldOpen(id: WorldId, cleared: WorldId[]): boolean {
+  const w = worldById(id);
+  if (w.index <= 3) return true;
+  if (w.id === "peaks") return cleared.includes("canyon");
+  return false;
+}
+
+const HEARTLAND_KIT: StageKit = {
+  sky: "sky",
+  far: "far",
+  mid: "mid",
+  near: "near",
+  ground: "ground",
+  fg: "foreground",
+  heightmap: "heightmap",
+  enemy: "enemy",
+  enemyAnim: "enemy-fly",
+  truck: "truck",
+  tank: "truck",
+  aa: "aa",
+  truckAnim: "truck-idle",
+  tankAnim: "truck-idle",
+  aaAnim: "aa-idle",
+  radar: true,
+  decor: [
+    { key: "barn", scale: 0.72, plant: 44 },
+    { key: "silo", scale: 0.7, plant: 22 },
+    { key: "hay", scale: 0.55, plant: 8 },
+    { key: "fence", scale: 1, plant: 8, depth: 35 },
+    { key: "fence", scale: 1, plant: 8, depth: 35 },
+  ],
+  groundDrawH: 168,
+  yMin: 48,
+  startY: 260,
+  airMin: 110,
+  airMax: 360,
+};
+
+const TIDE_KIT: StageKit = {
+  sky: "tide-sky",
+  far: "tide-far",
+  mid: "tide-mid",
+  near: "tide-near",
+  ground: "tide-ground",
+  fg: "tide-fg",
+  heightmap: "tide-heightmap",
+  enemy: "tide-enemy",
+  enemyAnim: "tide-enemy-fly",
+  truck: "boat",
+  tank: "ship",
+  aa: "naval-aa",
+  truckAnim: "boat-idle",
+  tankAnim: "ship-idle",
+  aaAnim: "naval-aa-idle",
+  radar: false,
+  decor: [
+    { key: "seastack", scale: 0.7, plant: 12 },
+    { key: "seastack", scale: 0.58, plant: 10 },
+    { key: "buoy", scale: 0.5, plant: 16 },
+    { key: "lighthouse", scale: 0.88, plant: 10 },
+  ],
+  decorEvery: 6.2,
+  groundDrawH: 168,
+  yMin: 48,
+  startY: 250,
+  airMin: 110,
+  airMax: 360,
+};
+
+const CANYON_KIT: StageKit = {
+  sky: "cyn-sky",
+  far: "cyn-far",
+  mid: "cyn-mid",
+  near: "cyn-near",
+  ground: "cyn-ground",
+  fg: "cyn-fg",
+  ceiling: "cyn-ceiling",
+  heightmap: "cyn-heightmap",
+  ceilingmap: "cyn-ceilingmap",
+  enemy: "cyn-enemy",
+  enemyAnim: "cyn-enemy-fly",
+  truck: "jeep",
+  tank: "crawler",
+  aa: "ledge-aa",
+  truckAnim: "jeep-idle",
+  tankAnim: "crawler-idle",
+  aaAnim: "ledge-aa-idle",
+  radar: false,
+  decor: [
+    { key: "cactus", scale: 0.32, plant: 6 },
+    { key: "spire", scale: 0.62, plant: 10 },
+    { key: "mesa", scale: 0.55, plant: 14 },
+    { key: "cactus", scale: 0.26, plant: 6 },
+  ],
+  groundDrawH: 250,
+  yMin: 260,
+  startY: 340,
+  airMin: 290,
+  airMax: 390,
+};
+
+export function stageKit(id: string | undefined | null): StageKit {
+  if (id === "tidefront") return TIDE_KIT;
+  if (id === "canyon") return CANYON_KIT;
+  return HEARTLAND_KIT;
 }

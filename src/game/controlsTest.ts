@@ -25,6 +25,8 @@ export type ControlsProbe = {
   getAirTally?: () => number;
   getGroundTally?: () => number;
   skipTo?: (t: number) => void;
+  getWorld?: () => string;
+  getLastHit?: () => string;
 };
 
 declare global {

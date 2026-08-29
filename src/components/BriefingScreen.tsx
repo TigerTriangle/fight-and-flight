@@ -13,7 +13,7 @@ export function BriefingScreen() {
   const plane = planeById(planeId);
 
   const fly = () => {
-    if (!world.open) return;
+    if (!world.open || world.placeholder) return;
     audio.unlock();
     useGameStore.getState().resetRun();
     useGameStore.getState().setPhase("playing");
@@ -48,12 +48,19 @@ export function BriefingScreen() {
         </h2>
         <p className="mt-1 text-sm text-muted">
           {plane.name}
-          {world.placeholder ? " · Heartland chart" : ""}
+          {world.placeholder ? " · Charts unfinished" : ""}
         </p>
-        <p className="mt-4 font-sans text-base leading-relaxed text-fg">{world.briefing}</p>
+        <p className="mt-4 font-sans text-base leading-relaxed text-fg">
+          {world.briefing || "This theater is still being painted."}
+        </p>
         <div className="mt-6 flex flex-col gap-3">
-          <Button size="lg" className="font-display text-2xl tracking-wide" onClick={fly}>
-            Fly
+          <Button
+            size="lg"
+            className="font-display text-2xl tracking-wide"
+            disabled={world.placeholder}
+            onClick={fly}
+          >
+            {world.placeholder ? "Coming online" : "Fly"}
           </Button>
           <Button variant="secondary" onClick={back}>
             Theaters

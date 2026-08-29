@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { HIGH_SCORE_KEY } from "./config";
-import { medalFor, type Medal } from "./mission";
+import { CLEARED_KEY, HIGH_SCORE_KEY } from "./config";
+import { medalFor, type EndCause, type Medal } from "./mission";
 import { DEFAULT_PLANE, planeById, type PlaneId } from "./planes";
 import { DEFAULT_WORLD, type WorldId } from "./worlds";
 
@@ -20,6 +20,23 @@ function readHighScore() {
   return Number.isFinite(n) ? n : 0;
 }
 
+function readCleared(): WorldId[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CLEARED_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is WorldId => typeof id === "string");
+  } catch {
+    return [];
+  }
+}
+
+function writeCleared(ids: WorldId[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CLEARED_KEY, JSON.stringify(ids));
+}
+
 type GameStore = {
   phase: Phase;
   ready: boolean;
@@ -36,8 +53,10 @@ type GameStore = {
   touch: boolean;
   planeId: PlaneId;
   worldId: WorldId;
+  clearedWorlds: WorldId[];
   cleared: boolean;
   medal: Medal;
+  endCause: EndCause;
   airKills: number;
   groundKills: number;
   setReady: () => void;
@@ -63,6 +82,7 @@ type GameStore = {
       medal?: Medal;
       airKills?: number;
       groundKills?: number;
+      endCause?: EndCause;
     },
   ) => void;
   resetRun: () => void;
@@ -84,8 +104,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   touch: false,
   planeId: DEFAULT_PLANE,
   worldId: DEFAULT_WORLD,
+  clearedWorlds: [],
   cleared: false,
   medal: "none",
+  endCause: "air",
   airKills: 0,
   groundKills: 0,
   setReady: () => {
@@ -93,6 +115,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ready: true,
       phase: get().phase === "booting" ? "title" : get().phase,
       highScore: readHighScore(),
+      clearedWorlds: readCleared(),
     });
   },
   setTouch: (touch) => set({ touch }),
@@ -109,14 +132,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (typeof window !== "undefined") {
       window.localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
     }
+    let clearedWorlds = get().clearedWorlds;
+    if (extra?.cleared) {
+      const id = get().worldId;
+      if (!clearedWorlds.includes(id)) {
+        clearedWorlds = [...clearedWorlds, id];
+        writeCleared(clearedWorlds);
+      }
+    }
     set({
       score,
       highScore,
       phase: "results",
       cleared: extra?.cleared ?? false,
-      medal: extra?.medal ?? medalFor(score),
+      medal: extra?.medal ?? medalFor(score, get().worldId),
+      endCause: extra?.endCause ?? "air",
       airKills: extra?.airKills ?? 0,
       groundKills: extra?.groundKills ?? 0,
+      clearedWorlds,
     });
   },
   resetRun: () => {
@@ -132,6 +165,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       beat: "Takeoff",
       cleared: false,
       medal: "none",
+      endCause: "air",
       airKills: 0,
       groundKills: 0,
     });
