@@ -169,9 +169,8 @@ export function worldById(id: string | undefined | null): WorldDef {
 export function isWorldOpen(id: WorldId, cleared: WorldId[]): boolean {
   const w = worldById(id);
   if (w.index <= 3) return true;
-  if (w.id === "peaks") return cleared.includes("canyon");
-  if (w.id === "canopy") return cleared.includes("peaks");
-  return false;
+  const prev = WORLDS.find((x) => x.index === w.index - 1);
+  return !!prev && cleared.includes(prev.id);
 }
 
 const HEARTLAND_KIT: StageKit = {

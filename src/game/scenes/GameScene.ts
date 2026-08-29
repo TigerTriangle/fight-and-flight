@@ -367,6 +367,7 @@ export class GameScene extends Phaser.Scene {
     if (this.forced.has("KeyW") || this.forced.has("ArrowUp")) actions.moveY = Math.min(1, actions.moveY - 1);
     if (this.forced.has("KeyS") || this.forced.has("ArrowDown")) actions.moveY = Math.min(1, actions.moveY + 1);
     if (this.forced.has("Space")) actions.fire = true;
+    if (useGameStore.getState().autoFire) actions.fire = true;
     if (this.forced.has("KeyF") || this.forced.has("ShiftLeft")) actions.bomb = true;
     const mag = Math.hypot(actions.moveX, actions.moveY);
     if (mag > 1) {

@@ -40,7 +40,9 @@ function resultArt(medal: Medal, cause: EndCause) {
 export function GameOverScreen() {
   const score = useGameStore((s) => s.score);
   const highScore = useGameStore((s) => s.highScore);
+  const isWorldBest = useGameStore((s) => s.isWorldBest);
   const worldId = useGameStore((s) => s.worldId);
+  const worldBest = useGameStore((s) => s.best[s.worldId]?.score ?? 0);
   const cleared = useGameStore((s) => s.cleared);
   const medal = useGameStore((s) => s.medal);
   const endCause = useGameStore((s) => s.endCause);
@@ -48,7 +50,7 @@ export function GameOverScreen() {
   const groundKills = useGameStore((s) => s.groundKills);
   const world = worldById(worldId);
   const medals = missionFor(worldId).medals;
-  const isBest = score > 0 && score >= highScore;
+  const isBest = score > 0 && isWorldBest;
   const caption = medal === "none" ? CAUSE_COPY[endCause] : MEDAL_COPY[medal];
   const art = resultArt(medal, endCause);
 
@@ -84,7 +86,7 @@ export function GameOverScreen() {
           <p className="mt-2 text-sm text-muted">
             {isBest
               ? `New best over ${world.name}.`
-              : `${world.name} · Best ${highScore.toLocaleString()}`}
+              : `${world.name} · Best ${(worldBest || highScore).toLocaleString()}`}
           </p>
           <p className="mt-3 text-sm text-muted">
             Air {airKills} · Ground {groundKills}

@@ -12,6 +12,7 @@ export function TouchControls() {
   const [firing, setFiring] = useState(false);
   const gunHeat = useGameStore((s) => s.gunHeat);
   const gunHot = useGameStore((s) => s.gunHot);
+  const autoFire = useGameStore((s) => s.autoFire);
   const pid = useRef<number | null>(null);
 
   useEffect(() => {
@@ -118,7 +119,7 @@ export function TouchControls() {
             )}
             style={{ transform: `scaleY(${gunHeat})` }}
           />
-          <span className="relative">{gunHot ? "HOT" : "Gun"}</span>
+          <span className="relative">{gunHot ? "HOT" : autoFire ? "AUTO" : "Gun"}</span>
         </button>
       </div>
       <button

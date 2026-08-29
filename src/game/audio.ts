@@ -25,8 +25,9 @@ export class GameAudio {
 
   applyMute() {
     if (!this.master || !this.ctx) return;
-    const muted = useGameStore.getState().muted;
-    this.master.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.02);
+    const { muted, volume } = useGameStore.getState();
+    const gain = muted ? 0 : Math.min(1, Math.max(0, volume));
+    this.master.gain.setTargetAtTime(gain, this.ctx.currentTime, 0.02);
   }
 
   gun() {

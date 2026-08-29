@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/Hint";
 import { WORLDS, isWorldOpen, worldById, type WorldId } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
 import { cn } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
 export function WorldSelect() {
   const worldId = useGameStore((s) => s.worldId);
   const clearedWorlds = useGameStore((s) => s.clearedWorlds);
+  const best = useGameStore((s) => s.best);
   const selected = worldById(worldId);
 
   const pick = (id: WorldId, open: boolean) => {
@@ -50,9 +52,11 @@ export function WorldSelect() {
         <p className="font-display text-sm uppercase tracking-[0.22em] text-accent">
           Theaters
         </p>
-        <Button variant="ghost" className="min-h-11" onClick={back}>
-          Hangar
-        </Button>
+        <Hint text="Pick a different aircraft.">
+          <Button variant="ghost" className="min-h-11" onClick={back}>
+            Hangar
+          </Button>
+        </Hint>
       </div>
 
       <div className="mx-auto mt-3 grid min-h-0 w-full max-w-2xl flex-1 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
@@ -96,12 +100,10 @@ export function WorldSelect() {
                   {open
                     ? w.placeholder
                       ? `${w.tag} · Coming online`
-                      : w.tag
-                    : w.id === "peaks"
-                      ? "Clear Red Canyon."
-                      : w.id === "canopy"
-                        ? "Clear High Peaks."
-                        : "Clear the previous theater."}
+                      : best[w.id]?.medal && best[w.id]?.medal !== "none"
+                        ? `${w.tag} · ${best[w.id]!.medal}`
+                        : w.tag
+                    : `Clear ${WORLDS.find((x) => x.index === w.index - 1)?.name ?? "the previous theater"}.`}
                 </span>
               </span>
               {!open ? <Lock className="size-4 shrink-0 text-muted" aria-hidden /> : null}
