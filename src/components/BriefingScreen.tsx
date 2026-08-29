@@ -3,17 +3,19 @@ import { Button } from "@/components/ui/button";
 import { audio } from "@/game/audio";
 import { bridge } from "@/game/bridge";
 import { planeById } from "@/game/planes";
-import { worldById } from "@/game/worlds";
+import { isWorldOpen, worldById } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
 
 export function BriefingScreen() {
   const worldId = useGameStore((s) => s.worldId);
   const planeId = useGameStore((s) => s.planeId);
+  const clearedWorlds = useGameStore((s) => s.clearedWorlds);
   const world = worldById(worldId);
   const plane = planeById(planeId);
+  const open = isWorldOpen(world.id, clearedWorlds);
 
   const fly = () => {
-    if (!world.open || world.placeholder) return;
+    if (!open || world.placeholder) return;
     audio.unlock();
     useGameStore.getState().resetRun();
     useGameStore.getState().setPhase("playing");
@@ -48,7 +50,7 @@ export function BriefingScreen() {
         </h2>
         <p className="mt-1 text-sm text-muted">
           {plane.name}
-          {world.placeholder ? " · Charts unfinished" : ""}
+          {open && world.placeholder ? " · Charts unfinished" : ""}
         </p>
         <p className="mt-4 font-sans text-base leading-relaxed text-fg">
           {world.briefing || "This theater is still being painted."}
@@ -57,10 +59,10 @@ export function BriefingScreen() {
           <Button
             size="lg"
             className="font-display text-2xl tracking-wide"
-            disabled={world.placeholder}
+            disabled={!open || world.placeholder}
             onClick={fly}
           >
-            {world.placeholder ? "Coming online" : "Fly"}
+            {!open || world.placeholder ? "Coming online" : "Fly"}
           </Button>
           <Button variant="secondary" onClick={back}>
             Theaters

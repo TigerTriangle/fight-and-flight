@@ -111,6 +111,33 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image("cactus", `/game/cactus.png${v}`);
     this.load.image("spire", `/game/spire.png${v}`);
     this.load.image("mesa", `/game/mesa.png${v}`);
+    this.load.image("peaks-sky", `/game/peaks-sky.png${v}`);
+    this.load.image("peaks-far", `/game/peaks-far.png${v}`);
+    this.load.image("peaks-mid", `/game/peaks-mid.png${v}`);
+    this.load.image("peaks-near", `/game/peaks-near.png${v}`);
+    this.load.image("peaks-fg", `/game/peaks-fg.png${v}`);
+    this.load.image("peaks-ground", `/game/peaks-ground.png${v}`);
+    this.load.json("peaks-heightmap", `/game/peaks-heightmap.json${v}`);
+    this.load.spritesheet("peaks-enemy", `/game/peaks-enemy.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("peaks-boss", `/game/peaks-boss.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("snowcat", `/game/snowcat.png${v}`, { frameWidth: 256, frameHeight: 256 });
+    this.load.spritesheet("snow-halftrack", `/game/snow-halftrack.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("alpine-aa", `/game/alpine-aa.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.image("pine", `/game/pine.png${v}`);
+    this.load.image("hut", `/game/hut.png${v}`);
+    this.load.image("cairn", `/game/cairn.png${v}`);
   }
 
   create() {
@@ -191,11 +218,16 @@ export class PreloadScene extends Phaser.Scene {
       ["jeep", "jeep-idle"],
       ["crawler", "crawler-idle"],
       ["ledge-aa", "ledge-aa-idle"],
+      ["peaks-enemy", "peaks-enemy-fly"],
+      ["peaks-boss", "peaks-boss-fly"],
+      ["snowcat", "snowcat-idle"],
+      ["snow-halftrack", "snow-halftrack-idle"],
+      ["alpine-aa", "alpine-aa-idle"],
     ] as const) {
       this.anims.create({
         key: anim,
         frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
-        frameRate: key.endsWith("enemy") ? 9 : 6,
+        frameRate: key.endsWith("enemy") || key.endsWith("boss") ? 9 : 6,
         repeat: -1,
       });
     }

@@ -101,11 +101,14 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
       kind?: "trainer" | "fighter" | "heavy" | "boss";
       texture?: string;
       anim?: string;
+      hp?: number;
     },
   ) {
     this.kind = opts?.kind ?? "fighter";
     this.low = opts?.low ?? false;
-    this.hp = this.kind === "boss" ? 10 : this.kind === "heavy" ? 3 : this.kind === "trainer" ? 1 : 2;
+    this.hp =
+      opts?.hp ??
+      (this.kind === "boss" ? 10 : this.kind === "heavy" ? 3 : this.kind === "trainer" ? 1 : 2);
     this.fireAcc =
       this.kind === "trainer" ? 99 : this.kind === "heavy" ? 1.1 : this.kind === "boss" ? 1.6 : 0.35 + Math.random() * 0.5;
     this.enableBody(true, x, y, true, true);
@@ -114,8 +117,8 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
     const tex = opts?.texture ?? "enemy";
     if (this.texture.key !== tex) this.setTexture(tex);
     if (this.kind === "boss") {
-      this.setScale(1.18);
-      this.setTint(0xc9a07a);
+      this.setScale(1.22);
+      if (tex !== "peaks-boss") this.setTint(0xc9a07a);
     } else if (this.kind === "heavy") {
       this.setScale(0.82);
     } else if (this.kind === "trainer") {
@@ -171,11 +174,19 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
       tankAnim: string;
       aaAnim: string;
       radar: boolean;
+      hpTruck?: number;
+      hpAa?: number;
+      hpTank?: number;
     },
   ) {
     this.kind = kind;
     this.ledge = 0;
-    this.hp = kind === "tank" ? HP_TANK : kind === "aa" ? HP_AA : HP_TRUCK;
+    this.hp =
+      kind === "tank"
+        ? (art?.hpTank ?? HP_TANK)
+        : kind === "aa"
+          ? (art?.hpAa ?? HP_AA)
+          : (art?.hpTruck ?? HP_TRUCK);
     this.fireAcc = 0.6 + Math.random() * 0.5;
     this.enableBody(true, x, y, true, true);
     this.setDepth(42);
@@ -191,7 +202,7 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     const useRadar = art?.radar ?? true;
     if (kind === "aa") {
       this.setTexture(aaTex);
-      this.setScale(0.9);
+      this.setScale(aaTex === "alpine-aa" ? 0.88 : 0.9);
       this.play(aaAnim, true);
       bodyOf(this)?.setSize(132, 210).setOffset(62, 38);
       if (useRadar) this.showRadar();
@@ -199,14 +210,14 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     } else if (kind === "tank") {
       this.hideRadar();
       this.setTexture(tankTex);
-      this.setScale(tankTex === "ship" ? 0.92 : 0.78);
+      this.setScale(tankTex === "ship" ? 0.92 : tankTex === "snow-halftrack" ? 0.86 : 0.78);
       if (tankTex === "truck") this.setTint(0x9a8a68);
       this.play(tankAnim, true);
       bodyOf(this)?.setSize(200, 120).setOffset(28, 128);
     } else {
       this.hideRadar();
       this.setTexture(truckTex);
-      this.setScale(truckTex === "boat" ? 0.7 : 0.52);
+      this.setScale(truckTex === "boat" ? 0.7 : truckTex === "snowcat" ? 0.62 : 0.52);
       this.play(truckAnim, true);
       bodyOf(this)?.setSize(190, 118).setOffset(32, 130);
     }

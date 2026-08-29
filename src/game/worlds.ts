@@ -48,6 +48,19 @@ export type StageKit = {
   startY: number;
   airMin: number;
   airMax: number;
+  scroll?: number;
+  airSpeed?: number;
+  enemyBoss?: string;
+  enemyBossAnim?: string;
+  hp?: {
+    truck: number;
+    aa: number;
+    tank: number;
+    trainer: number;
+    fighter: number;
+    heavy: number;
+    boss: number;
+  };
 };
 
 export const WORLDS: WorldDef[] = [
@@ -87,8 +100,9 @@ export const WORLDS: WorldDef[] = [
     name: "High Peaks",
     tag: "alpine",
     open: false,
-    placeholder: true,
-    briefing: "Charts stop at the tree line. High Peaks is still being painted.",
+    placeholder: false,
+    briefing:
+      "Thin air over the snow line. Interceptors come in fast. Snowcats and flak hold the valley. Break the ridge bomber at the end — do not waste the burst.",
   },
   {
     id: "canopy",
@@ -156,6 +170,7 @@ export function isWorldOpen(id: WorldId, cleared: WorldId[]): boolean {
   const w = worldById(id);
   if (w.index <= 3) return true;
   if (w.id === "peaks") return cleared.includes("canyon");
+  if (w.id === "canopy") return cleared.includes("peaks");
   return false;
 }
 
@@ -253,8 +268,45 @@ const CANYON_KIT: StageKit = {
   airMax: 390,
 };
 
+const PEAKS_KIT: StageKit = {
+  sky: "peaks-sky",
+  far: "peaks-far",
+  mid: "peaks-mid",
+  near: "peaks-near",
+  ground: "peaks-ground",
+  fg: "peaks-fg",
+  heightmap: "peaks-heightmap",
+  enemy: "peaks-enemy",
+  enemyAnim: "peaks-enemy-fly",
+  enemyBoss: "peaks-boss",
+  enemyBossAnim: "peaks-boss-fly",
+  truck: "snowcat",
+  tank: "snow-halftrack",
+  aa: "alpine-aa",
+  truckAnim: "snowcat-idle",
+  tankAnim: "snow-halftrack-idle",
+  aaAnim: "alpine-aa-idle",
+  radar: false,
+  decor: [
+    { key: "pine", scale: 0.18, plant: 4 },
+    { key: "pine", scale: 0.14, plant: 4 },
+    { key: "cairn", scale: 0.16, plant: 6 },
+    { key: "hut", scale: 0.2, plant: 8 },
+  ],
+  decorEvery: 5.4,
+  groundDrawH: 168,
+  yMin: 48,
+  startY: 220,
+  airMin: 90,
+  airMax: 360,
+  scroll: 248,
+  airSpeed: 1.34,
+  hp: { truck: 5, aa: 8, tank: 11, trainer: 1, fighter: 3, heavy: 5, boss: 18 },
+};
+
 export function stageKit(id: string | undefined | null): StageKit {
   if (id === "tidefront") return TIDE_KIT;
   if (id === "canyon") return CANYON_KIT;
+  if (id === "peaks") return PEAKS_KIT;
   return HEARTLAND_KIT;
 }

@@ -35,6 +35,6 @@ export const BOMB_CRATE_AT = 3;
 export const AIR_KILLS_PER_CRATE = 4;
 export const CRATE_FALL_SPEED = 76;
 
-export const ART_REV = 31;
+export const ART_REV = 34;
 export const HIGH_SCORE_KEY = "fnf-highscore-v1";
 export const CLEARED_KEY = "fnf-cleared-v1";

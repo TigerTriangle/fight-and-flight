@@ -99,7 +99,9 @@ export function WorldSelect() {
                       : w.tag
                     : w.id === "peaks"
                       ? "Clear Red Canyon."
-                      : "Clear the previous theater."}
+                      : w.id === "canopy"
+                        ? "Clear High Peaks."
+                        : "Clear the previous theater."}
                 </span>
               </span>
               {!open ? <Lock className="size-4 shrink-0 text-muted" aria-hidden /> : null}

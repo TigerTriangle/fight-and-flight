@@ -24,6 +24,7 @@ import {
   SCORE_CLEAR,
   SCORE_GROUND_BOMB,
   SCORE_HEAVY,
+  SCORE_BOSS,
   SCORE_LOW_CLIP,
   SCORE_SURVIVE_HULL,
   SCORE_TANK_BOMB,
@@ -130,6 +131,7 @@ export class GameScene extends Phaser.Scene {
   private mission: MissionDef = missionFor("heartland");
   private groundDrawH = GROUND_DRAW_H;
   private yMin = PLAYER_Y_MIN;
+  private scroll = SCROLL_SPEED;
   private overTimer: Phaser.Time.TimerEvent | null = null;
   private airKills = 0;
 
@@ -371,7 +373,7 @@ export class GameScene extends Phaser.Scene {
       actions.moveX /= mag;
       actions.moveY /= mag;
     }
-    this.worldX += SCROLL_SPEED * dt;
+    this.worldX += this.scroll * dt;
     this.scrollBg();
 
     if (this.mode === "play" && !this.dead) {
@@ -528,6 +530,7 @@ export class GameScene extends Phaser.Scene {
     this.mission = missionFor(id);
     this.groundDrawH = this.kit.groundDrawH;
     this.yMin = this.kit.yMin;
+    this.scroll = this.kit.scroll ?? SCROLL_SPEED;
     const k = this.kit;
     const ts = GAME_HEIGHT / 864;
     const plate = (s: Phaser.GameObjects.TileSprite, key: string) => {
@@ -821,11 +824,26 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.beat === "battery") {
       const left = this.trucks.countActive(true);
-      if (this.batteryOut && left === 0 && this.missionT > this.mission.countyEnd + 10) {
+      let bossUp = false;
+      for (const child of this.enemies.getChildren()) {
+        const e = child as EnemyFighter;
+        if (e.active && e.kind === "boss") bossUp = true;
+      }
+      const wait = this.mission.holdForBoss ? 14 : 10;
+      if (this.batteryOut && left === 0 && !bossUp && this.missionT > this.mission.countyEnd + wait) {
         this.finishMission();
       }
     }
-    if (this.missionT >= this.mission.end) this.finishMission();
+    if (this.missionT >= this.mission.end) {
+      let bossUp = false;
+      if (this.mission.holdForBoss) {
+        for (const child of this.enemies.getChildren()) {
+          const e = child as EnemyFighter;
+          if (e.active && e.kind === "boss") bossUp = true;
+        }
+      }
+      if (!bossUp) this.finishMission();
+    }
 
     if (this.decorT > (this.kit.decorEvery ?? 3.4)) {
       this.decorT = 0;
@@ -861,14 +879,33 @@ export class GameScene extends Phaser.Scene {
       const floor = groundY(this.worldX + x, this.hm, this.groundDrawH) - 56;
       vy = Phaser.Math.Clamp(vy, ceil, Math.max(ceil + 20, floor));
     }
-    const vx =
+    const mul = this.kit.airSpeed ?? 1;
+    const base =
       speed ??
-      (kind === "trainer" ? -(130 + Math.random() * 30) : kind === "heavy" ? -140 : -(185 + Math.random() * 50));
+      (kind === "trainer"
+        ? -(130 + Math.random() * 30)
+        : kind === "boss"
+          ? -92
+          : kind === "heavy"
+            ? -140
+            : -(185 + Math.random() * 50));
+    const vx = speed != null || kind === "boss" ? base : base * mul;
+    const tex = kind === "boss" ? (this.kit.enemyBoss ?? this.kit.enemy) : this.kit.enemy;
+    const anim = kind === "boss" ? (this.kit.enemyBossAnim ?? this.kit.enemyAnim) : this.kit.enemyAnim;
+    const hp =
+      kind === "boss"
+        ? this.kit.hp?.boss
+        : kind === "heavy"
+          ? this.kit.hp?.heavy
+          : kind === "trainer"
+            ? this.kit.hp?.trainer
+            : this.kit.hp?.fighter;
     const e = this.enemies.get(x, vy) as EnemyFighter | null;
     e?.launch(x, vy, vx, {
       kind,
-      texture: this.kit.enemy,
-      anim: this.kit.enemyAnim,
+      texture: tex,
+      anim,
+      hp,
     });
   }
 
@@ -877,7 +914,7 @@ export class GameScene extends Phaser.Scene {
     const x = GAME_WIDTH + 90 + dx;
     const y = groundY(this.worldX + x, this.hm, this.groundDrawH) + 6;
     const t = this.trucks.get(x, y) as Truck | null;
-    t?.place(x, y, SCROLL_SPEED, kind, {
+    t?.place(x, y, this.scroll, kind, {
       truck: this.kit.truck,
       tank: this.kit.tank,
       aa: this.kit.aa,
@@ -885,6 +922,9 @@ export class GameScene extends Phaser.Scene {
       tankAnim: this.kit.tankAnim,
       aaAnim: this.kit.aaAnim,
       radar: this.kit.radar,
+      hpTruck: this.kit.hp?.truck,
+      hpAa: this.kit.hp?.aa,
+      hpTank: this.kit.hp?.tank,
     });
   }
 
@@ -894,7 +934,7 @@ export class GameScene extends Phaser.Scene {
       const t = child as Truck;
       if (!t.active) continue;
       t.y = groundY(this.worldX + t.x, this.hm, this.groundDrawH) + 6 - (t.ledge || 0);
-      t.setVelocity(-SCROLL_SPEED, 0);
+      t.setVelocity(-this.scroll, 0);
     }
   }
 
@@ -928,7 +968,7 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min((this.game.loop.rawDelta || this.game.loop.delta) / 1000, 0.5);
     for (const child of this.decor.getChildren().slice()) {
       const img = child as Phaser.GameObjects.Image;
-      img.x -= SCROLL_SPEED * dt;
+      img.x -= this.scroll * dt;
       if (img.x < -240) {
         this.decor.remove(img, true, true);
       }
@@ -1013,11 +1053,14 @@ export class GameScene extends Phaser.Scene {
     this.playFx(enemy.x, enemy.y, "hit");
     const heavy = enemy.kind === "heavy";
     enemy.disableBody(true, true);
-    this.score += heavy
-      ? SCORE_HEAVY
-      : bombClip
-        ? SCORE_AIR + SCORE_LOW_CLIP
-        : SCORE_AIR;
+    this.score +=
+      enemy.kind === "boss"
+        ? SCORE_BOSS
+        : heavy
+          ? SCORE_HEAVY
+          : bombClip
+            ? SCORE_AIR + SCORE_LOW_CLIP
+            : SCORE_AIR;
     this.airTally += 1;
     if (fromGun) {
       this.airKills += 1;
