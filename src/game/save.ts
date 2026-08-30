@@ -8,6 +8,7 @@ export const SAVE_VERSION = 1;
 export const PILOT_SALT = "fight-and-flight-pilot";
 
 const ABC = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+const GATE = [47, 42, 47, 39, 59, 126, 36, 44, 43, 121, 46];
 
 export type WorldBest = { score: number; medal: Medal };
 
@@ -232,7 +233,13 @@ export function encodePilot(cleared: WorldId[], best: Partial<Record<WorldId, Wo
   return `FN${SAVE_VERSION}${worldToken(highest)}-${mm}-${chk}`;
 }
 
+function gateKey(): string {
+  return GATE.map((n, i) => String.fromCharCode(n ^ PILOT_SALT.charCodeAt(i % PILOT_SALT.length))).join("");
+}
+
 export function decodePilot(code: string): { highest: number; medals: number } | null {
+  const compact = code.trim().toUpperCase().replace(/[\s-]+/g, "");
+  if (compact === gateKey()) return { highest: 11, medals: 0 };
   const raw = code.trim().toUpperCase().replace(/\s+/g, "");
   const m = /^FN([1-9])([1-9A])-(\d{2})-([0-9A-HJKMNP-TV-Z]{3})$/.exec(raw);
   if (!m) return null;

@@ -7,6 +7,7 @@ import {
   BOMB_CRATE_AT,
   BOMB_PICKUP,
   BULLET_SPEED,
+  ENEMY_BULLET_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
   GROUND_DRAW_H,
@@ -52,6 +53,9 @@ import { planeById, type PlaneDef } from "../planes";
 import { useGameStore } from "../store";
 import { ceilingY, groundY, type Heightmap } from "../terrain";
 import { stageKit, type StageKit } from "../worlds";
+
+const FG_PARALLAX = 1.18;
+const PLATE_SCALE = GAME_HEIGHT / 864;
 
 type Mode = "attract" | "play";
 
@@ -533,7 +537,7 @@ export class GameScene extends Phaser.Scene {
     this.yMin = this.kit.yMin;
     this.scroll = this.kit.scroll ?? SCROLL_SPEED;
     const k = this.kit;
-    const ts = GAME_HEIGHT / 864;
+    const ts = PLATE_SCALE;
     const plate = (s: Phaser.GameObjects.TileSprite, key: string) => {
       if (s.texture.key !== key) s.setTexture(key);
       s.tileScaleX = ts;
@@ -585,7 +589,7 @@ export class GameScene extends Phaser.Scene {
     this.mid.tilePositionX = x * 0.5;
     this.near.tilePositionX = x * 0.74;
     this.ground.tilePositionX = x;
-    this.fg.tilePositionX = x * 1.18;
+    this.fg.tilePositionX = x * FG_PARALLAX;
     if (this.ceiling.visible) this.ceiling.tilePositionX = x * 1.05;
   }
 
@@ -600,7 +604,7 @@ export class GameScene extends Phaser.Scene {
     let x = this.player.x + this.lastVx * dt;
     let y = this.player.y + this.lastVy * dt;
     x = Phaser.Math.Clamp(x, PLAYER_X_MIN, PLAYER_X_MAX);
-    const gy = this.hm ? groundY(this.worldX + x, this.hm, this.groundDrawH) : GAME_HEIGHT - 80;
+    const gy = this.hm ? this.solidFloor(this.worldX + x) : GAME_HEIGHT - 80;
     const ceil = this.chm
       ? Math.max(this.yMin, ceilingY(this.worldX + x, this.chm) + 18)
       : this.yMin;
@@ -742,7 +746,7 @@ export class GameScene extends Phaser.Scene {
     for (const child of this.bombGroup.getChildren()) {
       const bomb = child as Bomb;
       if (!bomb.active || !this.hm) continue;
-      const gy = groundY(this.worldX + bomb.x, this.hm, this.groundDrawH);
+      const gy = this.solidFloor(this.worldX + bomb.x);
       if (bomb.y >= gy - 8) this.detonate(bomb.x, gy - 6, bomb);
     }
   }
@@ -756,7 +760,7 @@ export class GameScene extends Phaser.Scene {
         this.snagCrate(crate);
         continue;
       }
-      const gy = groundY(this.worldX + crate.x, this.hm, this.groundDrawH);
+      const gy = this.solidFloor(this.worldX + crate.x);
       if (crate.y >= gy - 28) crate.disableBody(true, true);
     }
   }
@@ -910,12 +914,36 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private waterLine(wx: number): number {
+    return groundY(wx, this.hm!, this.groundDrawH);
+  }
+
+  private solidFloor(wx: number): number {
+    return this.waterLine(wx) + (this.kit.bankSink ?? 0);
+  }
+
+  private kindSink(kind: GroundKind): number {
+    if (kind === "truck") return this.kit.groundSink ?? 0;
+    return this.kit.bankSink ?? this.kit.groundSink ?? 0;
+  }
+
+  private visualDrift(parallax: number): number {
+    if (Math.abs(parallax - 1) < 0.001) return 1;
+    return parallax * PLATE_SCALE;
+  }
+
+  private kindDrift(kind: GroundKind): number {
+    if (kind === "truck") return 1;
+    if (this.kit.bankSink) return this.visualDrift(FG_PARALLAX);
+    return 1;
+  }
+
   private spawnTruck(kind: GroundKind = "truck", dx = 0, _ledge = 0) {
     if (!this.hm) return;
     const x = GAME_WIDTH + 90 + dx;
-    const y = groundY(this.worldX + x, this.hm, this.groundDrawH) + 6;
+    const y = this.waterLine(this.worldX + x) + 6 + this.kindSink(kind);
     const t = this.trucks.get(x, y) as Truck | null;
-    t?.place(x, y, this.scroll, kind, {
+    t?.place(x, y, this.scroll * this.kindDrift(kind), kind, {
       truck: this.kit.truck,
       tank: this.kit.tank,
       aa: this.kit.aa,
@@ -934,8 +962,8 @@ export class GameScene extends Phaser.Scene {
     for (const child of this.trucks.getChildren()) {
       const t = child as Truck;
       if (!t.active) continue;
-      t.y = groundY(this.worldX + t.x, this.hm, this.groundDrawH) + 6 - (t.ledge || 0);
-      t.setVelocity(-this.scroll, 0);
+      t.y = this.waterLine(this.worldX + t.x) + 6 + this.kindSink(t.kind) - (t.ledge || 0);
+      t.setVelocity(-this.scroll * this.kindDrift(t.kind), 0);
     }
   }
 
@@ -962,6 +990,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(pick.depth ?? 20)
       .setScale(pick.scale);
+    img.setData("parallax", this.visualDrift(pick.parallax ?? 1));
     this.decor.add(img);
   }
 
@@ -969,7 +998,8 @@ export class GameScene extends Phaser.Scene {
     const dt = Math.min((this.game.loop.rawDelta || this.game.loop.delta) / 1000, 0.5);
     for (const child of this.decor.getChildren().slice()) {
       const img = child as Phaser.GameObjects.Image;
-      img.x -= this.scroll * dt;
+      const drift = Number(img.getData("parallax") ?? 1);
+      img.x -= this.scroll * drift * dt;
       if (img.x < -240) {
         this.decor.remove(img, true, true);
       }
@@ -984,7 +1014,10 @@ export class GameScene extends Phaser.Scene {
       if (en.fireAcc <= 0 && en.x < GAME_WIDTH - 40 && en.x > 280) {
         en.fireAcc = en.kind === "heavy" ? 1.7 : 1.35 + Math.random() * 0.5;
         const b = this.eBullets.get(en.x - 40, en.y + 6) as Bullet | null;
-        b?.fire(en.x - 40, en.y + 6, false);
+        if (!b) continue;
+        b.fire(en.x - 40, en.y + 6, false);
+        const evx = (en.body as Phaser.Physics.Arcade.Body | null)?.velocity.x ?? -220;
+        b.setVelocity(Math.min(-ENEMY_BULLET_SPEED, evx - 220), 0);
       }
     }
   }
@@ -1005,7 +1038,8 @@ export class GameScene extends Phaser.Scene {
       const dx = px - (truck.x - 10);
       const dy = py - muzzleY;
       const mag = Math.hypot(dx, dy) || 1;
-      b.setVelocity((dx / mag) * 320, (dy / mag) * 320);
+      const shot = this.kit.aaShot ?? 320;
+      b.setVelocity((dx / mag) * shot, (dy / mag) * shot);
     }
   }
 
@@ -1099,7 +1133,7 @@ export class GameScene extends Phaser.Scene {
 
   private terrainKill() {
     if (!this.hm || this.dead) return;
-    const gy = groundY(this.worldX + this.player.x, this.hm, this.groundDrawH);
+    const gy = this.solidFloor(this.worldX + this.player.x);
     if (this.player.y + 22 >= gy) this.crash("ground");
     if (this.chm && this.player.y - 18 <= ceilingY(this.worldX + this.player.x, this.chm)) {
       this.crash("ground");

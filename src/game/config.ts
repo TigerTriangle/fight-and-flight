@@ -15,7 +15,7 @@ export const GUN_COOL_RATE = 0.85;
 export const GUN_OVERHEAT_LOCK = 1.25;
 export const BOMB_COOLDOWN = 0.4;
 export const BULLET_SPEED = 780;
-export const ENEMY_BULLET_SPEED = 300;
+export const ENEMY_BULLET_SPEED = 540;
 export const BOMB_GRAVITY = 980;
 export const BLAST_RADIUS = 92;
 
@@ -35,6 +35,6 @@ export const BOMB_CRATE_AT = 3;
 export const AIR_KILLS_PER_CRATE = 4;
 export const CRATE_FALL_SPEED = 76;
 
-export const ART_REV = 34;
+export const ART_REV = 47;
 export const HIGH_SCORE_KEY = "fnf-highscore-v1";
 export const CLEARED_KEY = "fnf-cleared-v1";

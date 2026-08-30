@@ -118,7 +118,7 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
     if (this.texture.key !== tex) this.setTexture(tex);
     if (this.kind === "boss") {
       this.setScale(1.22);
-      if (tex !== "peaks-boss") this.setTint(0xc9a07a);
+      if (tex === "enemy") this.setTint(0xc9a07a);
     } else if (this.kind === "heavy") {
       this.setScale(0.82);
     } else if (this.kind === "trainer") {
@@ -202,7 +202,11 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     const useRadar = art?.radar ?? true;
     if (kind === "aa") {
       this.setTexture(aaTex);
-      this.setScale(aaTex === "alpine-aa" ? 0.88 : 0.9);
+      this.setScale(
+        aaTex === "alpine-aa" || aaTex === "jungle-aa" || aaTex === "cave-aa" || aaTex === "gun-sat"
+          ? 0.88
+          : 0.9,
+      );
       this.play(aaAnim, true);
       bodyOf(this)?.setSize(132, 210).setOffset(62, 38);
       if (useRadar) this.showRadar();
@@ -210,14 +214,29 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     } else if (kind === "tank") {
       this.hideRadar();
       this.setTexture(tankTex);
-      this.setScale(tankTex === "ship" ? 0.92 : tankTex === "snow-halftrack" ? 0.86 : 0.78);
+      this.setScale(
+        tankTex === "ship"
+          ? 0.92
+          : tankTex === "snow-halftrack" ||
+              tankTex === "jungle-halftrack" ||
+              tankTex === "drill-tank" ||
+              tankTex === "barge-hulk"
+            ? 0.86
+            : 0.78,
+      );
       if (tankTex === "truck") this.setTint(0x9a8a68);
       this.play(tankAnim, true);
       bodyOf(this)?.setSize(200, 120).setOffset(28, 128);
     } else {
       this.hideRadar();
       this.setTexture(truckTex);
-      this.setScale(truckTex === "boat" ? 0.7 : truckTex === "snowcat" ? 0.62 : 0.52);
+      this.setScale(
+        truckTex === "boat" || truckTex === "sampan" || truckTex === "minecart" || truckTex === "cargo-hulk"
+          ? 0.7
+          : truckTex === "snowcat"
+            ? 0.62
+            : 0.52,
+      );
       this.play(truckAnim, true);
       bodyOf(this)?.setSize(190, 118).setOffset(32, 130);
     }

@@ -20,7 +20,7 @@ export type WorldDef = {
   briefing: string;
 };
 
-export type DecorProp = { key: string; scale: number; plant: number; depth?: number };
+export type DecorProp = { key: string; scale: number; plant: number; depth?: number; parallax?: number };
 
 export type StageKit = {
   sky: string;
@@ -50,6 +50,9 @@ export type StageKit = {
   airMax: number;
   scroll?: number;
   airSpeed?: number;
+  aaShot?: number;
+  groundSink?: number;
+  bankSink?: number;
   enemyBoss?: string;
   enemyBossAnim?: string;
   hp?: {
@@ -110,8 +113,9 @@ export const WORLDS: WorldDef[] = [
     name: "Canopy",
     tag: "jungle",
     open: false,
-    placeholder: true,
-    briefing: "",
+    placeholder: false,
+    briefing:
+      "Jungle river. They wait in the brush and pop from the trees. Clip the kites to keep bombs on the sampans. Break the Howler at the end.",
   },
   {
     id: "underdark",
@@ -119,8 +123,9 @@ export const WORLDS: WorldDef[] = [
     name: "Underdark",
     tag: "tunnel",
     open: false,
-    placeholder: true,
-    briefing: "",
+    placeholder: false,
+    briefing:
+      "Black tunnel. The ceiling tries to kiss you. Drones own the slot; carts and drills hold the rails. Cut the Borer at the end — do not scrape the rock.",
   },
   {
     id: "orbit",
@@ -128,8 +133,9 @@ export const WORLDS: WorldDef[] = [
     name: "Black Orbit",
     tag: "space",
     open: false,
-    placeholder: true,
-    briefing: "",
+    placeholder: false,
+    briefing:
+      "Open vacuum. Needles in the lane, hulks on the belt. Bombs still crack the wrecks. Break the Ring at the end.",
   },
   {
     id: "mare",
@@ -303,9 +309,126 @@ const PEAKS_KIT: StageKit = {
   hp: { truck: 5, aa: 8, tank: 11, trainer: 1, fighter: 3, heavy: 5, boss: 18 },
 };
 
+const CANOPY_KIT: StageKit = {
+  sky: "canopy-sky",
+  far: "canopy-far",
+  mid: "canopy-mid",
+  near: "canopy-near",
+  ground: "canopy-ground",
+  fg: "canopy-fg",
+  heightmap: "canopy-heightmap",
+  enemy: "canopy-kite",
+  enemyAnim: "canopy-kite-fly",
+  enemyBoss: "canopy-howler",
+  enemyBossAnim: "canopy-howler-fly",
+  truck: "sampan",
+  tank: "jungle-halftrack",
+  aa: "jungle-aa",
+  truckAnim: "sampan-idle",
+  tankAnim: "jungle-halftrack-idle",
+  aaAnim: "jungle-aa-idle",
+  radar: false,
+  decor: [
+    { key: "palm", scale: 0.11, plant: 8, depth: 6, parallax: 0.74 },
+    { key: "stupa", scale: 0.11, plant: 10, depth: 6, parallax: 0.74 },
+    { key: "palm", scale: 0.16, plant: 92, depth: 38, parallax: 1.18 },
+    { key: "stilt-hut", scale: 0.14, plant: 94, depth: 38, parallax: 1.18 },
+  ],
+  decorEvery: 5.0,
+  groundDrawH: 168,
+  yMin: 48,
+  startY: 230,
+  airMin: 90,
+  airMax: 360,
+  scroll: 268,
+  airSpeed: 1.42,
+  groundSink: 24,
+  bankSink: 90,
+  hp: { truck: 6, aa: 9, tank: 12, trainer: 1, fighter: 4, heavy: 6, boss: 22 },
+};
+
+const DARK_KIT: StageKit = {
+  sky: "dark-sky",
+  far: "dark-far",
+  mid: "dark-mid",
+  near: "dark-near",
+  ground: "dark-ground",
+  fg: "dark-fg",
+  ceiling: "dark-ceiling",
+  heightmap: "dark-heightmap",
+  ceilingmap: "dark-ceilingmap",
+  enemy: "cave-drone",
+  enemyAnim: "cave-drone-fly",
+  enemyBoss: "borer-boss",
+  enemyBossAnim: "borer-boss-fly",
+  truck: "minecart",
+  tank: "drill-tank",
+  aa: "cave-aa",
+  truckAnim: "minecart-idle",
+  tankAnim: "drill-tank-idle",
+  aaAnim: "cave-aa-idle",
+  radar: false,
+  decor: [
+    { key: "stalagmite", scale: 0.14, plant: 6 },
+    { key: "crystal", scale: 0.12, plant: 6 },
+    { key: "lantern-post", scale: 0.16, plant: 8 },
+    { key: "stalagmite", scale: 0.11, plant: 6 },
+  ],
+  decorEvery: 4.6,
+  groundDrawH: 220,
+  yMin: 230,
+  startY: 330,
+  airMin: 250,
+  airMax: 385,
+  scroll: 292,
+  airSpeed: 1.52,
+  aaShot: 440,
+  hp: { truck: 7, aa: 10, tank: 14, trainer: 1, fighter: 5, heavy: 7, boss: 26 },
+};
+
+const ORBIT_KIT: StageKit = {
+  sky: "orbit-sky",
+  far: "orbit-far",
+  mid: "orbit-mid",
+  near: "orbit-near",
+  ground: "orbit-ground",
+  fg: "orbit-fg",
+  heightmap: "orbit-heightmap",
+  enemy: "orbit-needle",
+  enemyAnim: "orbit-needle-fly",
+  enemyBoss: "orbit-ring",
+  enemyBossAnim: "orbit-ring-fly",
+  truck: "cargo-hulk",
+  tank: "barge-hulk",
+  aa: "gun-sat",
+  truckAnim: "cargo-hulk-idle",
+  tankAnim: "barge-hulk-idle",
+  aaAnim: "gun-sat-idle",
+  radar: false,
+  decor: [
+    { key: "rocklet", scale: 0.12, plant: 4 },
+    { key: "solar-spar", scale: 0.14, plant: 6 },
+    { key: "nav-buoy", scale: 0.16, plant: 8 },
+    { key: "rocklet", scale: 0.1, plant: 4 },
+  ],
+  decorEvery: 4.4,
+  groundDrawH: 150,
+  yMin: 48,
+  startY: 210,
+  airMin: 70,
+  airMax: 400,
+  scroll: 314,
+  airSpeed: 1.62,
+  aaShot: 470,
+  hp: { truck: 8, aa: 11, tank: 16, trainer: 1, fighter: 6, heavy: 8, boss: 30 },
+};
+
 export function stageKit(id: string | undefined | null): StageKit {
   if (id === "tidefront") return TIDE_KIT;
   if (id === "canyon") return CANYON_KIT;
   if (id === "peaks") return PEAKS_KIT;
+  if (id === "canopy") return CANOPY_KIT;
+  if (id === "underdark") return DARK_KIT;
+  if (id === "orbit") return ORBIT_KIT;
   return HEARTLAND_KIT;
 }
