@@ -53,6 +53,7 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 128,
       frameHeight: 128,
     });
+    this.load.image("laser-bolt", `/game/laser-bolt.png${v}`);
     this.load.spritesheet("crate", `/game/crate.png${v}`, {
       frameWidth: 192,
       frameHeight: 192,
@@ -218,6 +219,33 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image("rocklet", `/game/rocklet.png${v}`);
     this.load.image("solar-spar", `/game/solar-spar.png${v}`);
     this.load.image("nav-buoy", `/game/nav-buoy.png${v}`);
+    this.load.image("mare-sky", `/game/mare-sky.png${v}`);
+    this.load.image("mare-far", `/game/mare-far.png${v}`);
+    this.load.image("mare-mid", `/game/mare-mid.png${v}`);
+    this.load.image("mare-near", `/game/mare-near.png${v}`);
+    this.load.image("mare-fg", `/game/mare-fg.png${v}`);
+    this.load.image("mare-ground", `/game/mare-ground.png${v}`);
+    this.load.json("mare-heightmap", `/game/mare-heightmap.json${v}`);
+    this.load.spritesheet("mare-hopper", `/game/mare-hopper.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("mare-walker", `/game/mare-walker.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("lunar-rover", `/game/lunar-rover.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("lunar-crawler", `/game/lunar-crawler.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("lunar-aa", `/game/lunar-aa.png${v}`, { frameWidth: 256, frameHeight: 256 });
+    this.load.image("moon-rock", `/game/moon-rock.png${v}`);
+    this.load.image("moon-antenna", `/game/moon-antenna.png${v}`);
+    this.load.image("moon-lander", `/game/moon-lander.png${v}`);
   }
 
   create() {
@@ -318,6 +346,11 @@ export class PreloadScene extends Phaser.Scene {
       ["cargo-hulk", "cargo-hulk-idle"],
       ["barge-hulk", "barge-hulk-idle"],
       ["gun-sat", "gun-sat-idle"],
+      ["mare-hopper", "mare-hopper-fly"],
+      ["mare-walker", "mare-walker-fly"],
+      ["lunar-rover", "lunar-rover-idle"],
+      ["lunar-crawler", "lunar-crawler-idle"],
+      ["lunar-aa", "lunar-aa-idle"],
     ] as const) {
       this.anims.create({
         key: anim,

@@ -62,15 +62,15 @@ export class Bomb extends Phaser.Physics.Arcade.Sprite {
     super(scene, x, y, "bomb");
   }
 
-  drop(x: number, y: number) {
+  drop(x: number, y: number, grav = 1) {
     this.enableBody(true, x, y, true, true);
     this.setDepth(65);
     this.setScale(0.38);
-    this.setVelocity(40, 80);
-    this.setAngularVelocity(40);
+    this.setVelocity(40, 48 * grav);
+    this.setAngularVelocity(28);
     const body = bodyOf(this);
     body?.setAllowGravity(true);
-    body?.setGravityY(BOMB_GRAVITY);
+    body?.setGravityY(BOMB_GRAVITY * grav);
     body?.setSize(48, 70).setOffset(40, 30);
     this.play("bomb-spin", true);
   }
@@ -79,6 +79,29 @@ export class Bomb extends Phaser.Physics.Arcade.Sprite {
     super.preUpdate(time, delta);
     if (!this.active) return;
     if (this.y > 780) this.disableBody(true, true);
+  }
+}
+
+export class LaserBolt extends Phaser.Physics.Arcade.Sprite {
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "laser-bolt");
+  }
+
+  fire(x: number, y: number, vx: number, vy: number) {
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(68);
+    this.setScale(0.72);
+    this.setRotation(Math.atan2(vy, vx));
+    this.setVelocity(vx, vy);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(64, 64).setOffset(48, -12);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    if (this.x > 1400 || this.x < -80 || this.y > 800 || this.y < -80) this.disableBody(true, true);
   }
 }
 
@@ -203,7 +226,11 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     if (kind === "aa") {
       this.setTexture(aaTex);
       this.setScale(
-        aaTex === "alpine-aa" || aaTex === "jungle-aa" || aaTex === "cave-aa" || aaTex === "gun-sat"
+        aaTex === "alpine-aa" ||
+          aaTex === "jungle-aa" ||
+          aaTex === "cave-aa" ||
+          aaTex === "gun-sat" ||
+          aaTex === "lunar-aa"
           ? 0.88
           : 0.9,
       );
@@ -220,7 +247,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
           : tankTex === "snow-halftrack" ||
               tankTex === "jungle-halftrack" ||
               tankTex === "drill-tank" ||
-              tankTex === "barge-hulk"
+              tankTex === "barge-hulk" ||
+              tankTex === "lunar-crawler"
             ? 0.86
             : 0.78,
       );
@@ -231,7 +259,11 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
       this.hideRadar();
       this.setTexture(truckTex);
       this.setScale(
-        truckTex === "boat" || truckTex === "sampan" || truckTex === "minecart" || truckTex === "cargo-hulk"
+        truckTex === "boat" ||
+          truckTex === "sampan" ||
+          truckTex === "minecart" ||
+          truckTex === "cargo-hulk" ||
+          truckTex === "lunar-rover"
           ? 0.7
           : truckTex === "snowcat"
             ? 0.62
@@ -288,6 +320,7 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
   supply = true;
   kind: "bomb" = "bomb";
   sway = 0;
+  fall = CRATE_FALL_SPEED;
   private badge: Phaser.GameObjects.Sprite | null = null;
   private tag: Phaser.GameObjects.Text | null = null;
 
@@ -296,19 +329,20 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     this.once("destroy", () => this.clearMarks());
   }
 
-  drop(x: number, y: number) {
+  drop(x: number, y: number, fall = CRATE_FALL_SPEED, label = "BOMB") {
     this.supply = true;
     this.kind = "bomb";
     this.sway = Math.random() * Math.PI * 2;
+    this.fall = fall;
     this.enableBody(true, x, y, true, true);
     this.setDepth(58);
     this.setScale(0.62);
-    this.setVelocity(18, CRATE_FALL_SPEED);
+    this.setVelocity(18, this.fall);
     this.play("crate-fall", true);
     const body = bodyOf(this);
     body?.setAllowGravity(false);
     body?.setSize(88, 128).setOffset(52, 40);
-    this.showMarks();
+    this.showMarks(label);
   }
 
   preUpdate(time: number, delta: number) {
@@ -318,7 +352,7 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
       return;
     }
     this.sway += delta * 0.0032;
-    this.setVelocity(Math.sin(this.sway) * 42, CRATE_FALL_SPEED);
+    this.setVelocity(Math.sin(this.sway) * 42, this.fall);
     this.x = Phaser.Math.Clamp(this.x, PLAYER_X_MIN + 24, PLAYER_X_MAX - 12);
     this.placeMarks();
     if (this.y > 760) this.disableBody(true, true);
@@ -329,17 +363,20 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     return super.disableBody(disableGameObject, hideGameObject);
   }
 
-  private showMarks() {
+  private showMarks(label = "BOMB") {
+    const laser = label === "BURST";
     if (!this.badge) {
-      this.badge = this.scene.add.sprite(this.x, this.y, "bomb", 0);
+      this.badge = this.scene.add.sprite(this.x, this.y, laser ? "laser-bolt" : "bomb", 0);
       this.badge.setDepth(59);
     }
-    this.badge.setScale(0.34);
+    this.badge.setTexture(laser ? "laser-bolt" : "bomb");
+    this.badge.setScale(laser ? 0.55 : 0.34);
     this.badge.setVisible(true);
-    this.badge.play("bomb-spin", true);
+    if (!laser) this.badge.play("bomb-spin", true);
+    else this.badge.anims.stop();
     if (!this.tag) {
       this.tag = this.scene.add
-        .text(this.x, this.y, "BOMB", {
+        .text(this.x, this.y, label, {
           fontFamily: "Teko, Barlow, sans-serif",
           fontSize: "22px",
           color: "#e8c15a",
@@ -349,6 +386,7 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
         .setOrigin(0.5)
         .setDepth(61);
     }
+    this.tag.setText(label);
     this.tag.setVisible(true);
     this.placeMarks();
   }

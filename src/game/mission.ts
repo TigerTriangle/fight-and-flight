@@ -394,8 +394,80 @@ const ORBIT_PACKS: Pack[] = [
   { t: 178, air: [{ kind: "fighter", y: 150, speed: -350 }] },
 ];
 
+const MARE_PACKS: Pack[] = [
+  { t: 3, air: [{ kind: "trainer", y: 170 }] },
+  { t: 6, air: [{ kind: "trainer", y: 250, dx: 40 }] },
+  { t: 9, air: [{ kind: "trainer", y: 130 }, { kind: "trainer", y: 300, dx: 70 }] },
+  { t: 12, air: [{ kind: "trainer", y: 210 }] },
+
+  { t: 15, air: [{ kind: "fighter", y: 150, speed: -345 }] },
+  { t: 17, air: [{ kind: "fighter", y: 270, speed: -335 }] },
+  { t: 20, ground: [{ kind: "truck" }] },
+  { t: 22, air: [{ kind: "fighter", y: 110, speed: -355 }, { kind: "fighter", y: 230, dx: 50 }] },
+  { t: 24, air: [{ kind: "fighter", y: 330, speed: -340 }] },
+  { t: 26, ground: [{ kind: "aa" }] },
+  { t: 28, air: [{ kind: "fighter", y: 160, speed: -350 }, { kind: "fighter", y: 260, dx: 40 }] },
+  { t: 31, air: [{ kind: "heavy", y: 190, speed: -260 }, { kind: "fighter", y: 100, dx: 80, speed: -355 }] },
+  { t: 34, ground: [{ kind: "truck" }] },
+  { t: 36, air: [{ kind: "fighter", y: 290, speed: -345 }] },
+  { t: 38, air: [{ kind: "fighter", y: 130, speed: -360 }, { kind: "fighter", y: 220, dx: 35 }, { kind: "fighter", y: 330, dx: 85 }] },
+  { t: 42, ground: [{ kind: "aa" }] },
+  { t: 44, air: [{ kind: "fighter", y: 180, speed: -350 }] },
+  { t: 46, air: [{ kind: "fighter", y: 250, speed: -345 }] },
+  { t: 48, ground: [{ kind: "tank" }] },
+  { t: 50, air: [{ kind: "heavy", y: 170 }, { kind: "fighter", y: 280, dx: 65, speed: -350 }] },
+  { t: 53, air: [{ kind: "fighter", y: 115, speed: -360 }] },
+  { t: 55, ground: [{ kind: "truck" }] },
+  { t: 57, air: [{ kind: "fighter", y: 200, speed: -355 }, { kind: "fighter", y: 310, dx: 45 }] },
+  { t: 60, air: [{ kind: "fighter", y: 145, speed: -350 }] },
+  { t: 62, ground: [{ kind: "aa" }] },
+  { t: 64, air: [{ kind: "fighter", y: 95, speed: -365 }, { kind: "fighter", y: 190, dx: 35 }, { kind: "fighter", y: 300, dx: 80 }] },
+  { t: 68, air: [{ kind: "heavy", y: 220, speed: -265 }, { kind: "fighter", y: 130, dx: 70, speed: -355 }] },
+  { t: 71, ground: [{ kind: "truck" }] },
+  { t: 73, air: [{ kind: "fighter", y: 260, speed: -350 }] },
+  { t: 75, air: [{ kind: "fighter", y: 155, speed: -360 }] },
+  { t: 77, ground: [{ kind: "aa" }] },
+  { t: 79, air: [{ kind: "fighter", y: 110, speed: -365 }, { kind: "fighter", y: 230, dx: 50 }] },
+  { t: 82, air: [{ kind: "fighter", y: 320, speed: -345 }] },
+  { t: 84, ground: [{ kind: "tank" }] },
+  { t: 86, air: [{ kind: "heavy", y: 180 }, { kind: "fighter", y: 100, dx: 75, speed: -360 }, { kind: "fighter", y: 270, dx: 40 }] },
+  { t: 90, air: [{ kind: "fighter", y: 200, speed: -355 }] },
+  { t: 92, ground: [{ kind: "truck" }] },
+  { t: 94, air: [{ kind: "fighter", y: 135, speed: -365 }, { kind: "fighter", y: 245, dx: 40 }] },
+  { t: 97, air: [{ kind: "fighter", y: 310, speed: -350 }] },
+  { t: 99, ground: [{ kind: "aa" }] },
+  { t: 101, air: [{ kind: "fighter", y: 90, speed: -370 }, { kind: "fighter", y: 170, dx: 30 }, { kind: "fighter", y: 290, dx: 85 }] },
+  { t: 105, air: [{ kind: "heavy", y: 210, speed: -270 }, { kind: "fighter", y: 120, dx: 70, speed: -360 }] },
+  { t: 108, ground: [{ kind: "tank" }] },
+  { t: 110, air: [{ kind: "fighter", y: 240, speed: -355 }] },
+  { t: 112, air: [{ kind: "fighter", y: 150, speed: -365 }] },
+  { t: 114, ground: [{ kind: "aa" }] },
+  { t: 116, air: [{ kind: "fighter", y: 105, speed: -370 }, { kind: "fighter", y: 220, dx: 45 }] },
+  { t: 119, air: [{ kind: "fighter", y: 300, speed: -350 }] },
+  { t: 121, ground: [{ kind: "truck" }] },
+  { t: 123, air: [{ kind: "heavy", y: 175 }, { kind: "fighter", y: 95, dx: 80, speed: -365 }, { kind: "fighter", y: 265, dx: 35 }] },
+  { t: 127, air: [{ kind: "fighter", y: 190, speed: -360 }] },
+  { t: 129, ground: [{ kind: "aa" }] },
+  { t: 131, air: [{ kind: "fighter", y: 130, speed: -365 }, { kind: "fighter", y: 250, dx: 40 }] },
+  { t: 134, air: [{ kind: "fighter", y: 320, speed: -350 }] },
+  { t: 136, ground: [{ kind: "tank" }] },
+  { t: 138, air: [{ kind: "fighter", y: 100, speed: -370 }, { kind: "fighter", y: 180, dx: 30 }, { kind: "fighter", y: 280, dx: 80 }] },
+  { t: 142, air: [{ kind: "fighter", y: 220, speed: -360 }] },
+  { t: 144, ground: [{ kind: "aa" }] },
+  { t: 146, air: [{ kind: "fighter", y: 140, speed: -365 }, { kind: "fighter", y: 260, dx: 50 }] },
+  { t: 149, air: [{ kind: "fighter", y: 310, speed: -355 }] },
+
+  { t: 153, air: [{ kind: "boss", y: 200, speed: -80 }], ground: [{ kind: "aa" }] },
+  { t: 158, air: [{ kind: "fighter", y: 120, speed: -365 }] },
+  { t: 162, air: [{ kind: "fighter", y: 270, speed: -355 }, { kind: "fighter", y: 170, dx: 65 }] },
+  { t: 166, ground: [{ kind: "aa" }] },
+  { t: 171, ground: [{ kind: "tank" }] },
+  { t: 176, air: [{ kind: "fighter", y: 140, speed: -365 }] },
+  { t: 181, ground: [{ kind: "aa" }] },
+];
+
 export const MISSIONS: Record<
-  "heartland" | "tidefront" | "canyon" | "peaks" | "canopy" | "underdark" | "orbit",
+  "heartland" | "tidefront" | "canyon" | "peaks" | "canopy" | "underdark" | "orbit" | "mare",
   MissionDef
 > = {
   heartland: {
@@ -514,6 +586,23 @@ export const MISSIONS: Record<
       clear: "Clear",
     },
   },
+  mare: {
+    introEnd: 3,
+    trainersEnd: 14,
+    countyEnd: 151,
+    batteryEnd: 190,
+    end: 198,
+    holdForBoss: true,
+    packs: MARE_PACKS,
+    medals: { bronze: 6000, silver: 12000, gold: 18600 },
+    beats: {
+      intro: "Dust off",
+      trainers: "Hoppers",
+      county: "The Mare",
+      battery: "Walker",
+      clear: "Clear",
+    },
+  },
 };
 
 export const MISSION = MISSIONS.heartland;
@@ -548,7 +637,8 @@ export function missionFor(id: string | undefined | null): MissionDef {
     id === "peaks" ||
     id === "canopy" ||
     id === "underdark" ||
-    id === "orbit"
+    id === "orbit" ||
+    id === "mare"
   )
     return MISSIONS[id];
   return MISSIONS.heartland;

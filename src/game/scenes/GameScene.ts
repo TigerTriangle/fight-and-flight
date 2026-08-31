@@ -8,12 +8,14 @@ import {
   BOMB_PICKUP,
   BULLET_SPEED,
   ENEMY_BULLET_SPEED,
+  CRATE_FALL_SPEED,
   GAME_HEIGHT,
   GAME_WIDTH,
   GROUND_DRAW_H,
   GUN_COOL_RATE,
   GUN_OVERHEAT_LOCK,
   INVULN_TIME,
+  LASER_SPEED,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
   PLAYER_Y_MIN,
@@ -45,6 +47,7 @@ import {
   CrateDrop,
   EnemyFighter,
   FxSprite,
+  LaserBolt,
   Truck,
   circleHits,
 } from "../entities";
@@ -89,6 +92,12 @@ function asEnemy(obj: unknown): EnemyFighter | null {
 function asCrate(obj: unknown): CrateDrop | null {
   const s = asSprite(obj);
   if (s && "supply" in s) return s as CrateDrop;
+  return null;
+}
+
+function asLaser(obj: unknown): LaserBolt | null {
+  const s = asSprite(obj);
+  if (s && s.texture?.key === "laser-bolt") return s as LaserBolt;
   return null;
 }
 
@@ -150,6 +159,7 @@ export class GameScene extends Phaser.Scene {
   private bullets!: Phaser.Physics.Arcade.Group;
   private eBullets!: Phaser.Physics.Arcade.Group;
   private bombGroup!: Phaser.Physics.Arcade.Group;
+  private laserGroup!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private trucks!: Phaser.Physics.Arcade.Group;
   private crates!: Phaser.Physics.Arcade.Group;
@@ -241,6 +251,11 @@ export class GameScene extends Phaser.Scene {
       maxSize: 12,
       runChildUpdate: true,
     });
+    this.laserGroup = this.physics.add.group({
+      classType: LaserBolt,
+      maxSize: 16,
+      runChildUpdate: true,
+    });
     this.enemies = this.physics.add.group({
       classType: EnemyFighter,
       maxSize: 24,
@@ -293,6 +308,11 @@ export class GameScene extends Phaser.Scene {
       const bullet = asBullet(a) ?? asBullet(b);
       const truck = asTruck(a) ?? asTruck(b);
       if (bullet && truck) this.hitGround(bullet, truck);
+    });
+    this.physics.add.overlap(this.laserGroup, this.trucks, (a, b) => {
+      const bolt = asLaser(a) ?? asLaser(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (bolt && truck) this.hitLaser(bolt, truck);
     });
     this.physics.add.overlap(this.player, this.trucks, () => this.hurt("obstacle"));
     this.physics.add.overlap(this.player, this.crates, (a, b) => {
@@ -389,6 +409,7 @@ export class GameScene extends Phaser.Scene {
       this.pinAir();
       this.strikeAir();
       this.bombsFall();
+      this.lasersFly();
       this.cratesFall();
       this.steerDarts();
       this.enemyGuns(dt);
@@ -433,6 +454,7 @@ export class GameScene extends Phaser.Scene {
       this.bullets,
       this.eBullets,
       this.bombGroup,
+      this.laserGroup,
       this.enemies,
       this.trucks,
       this.crates,
@@ -598,7 +620,7 @@ export class GameScene extends Phaser.Scene {
     if (actions.moveX > 0.05) this.probeYaw -= 2.6 * dt;
 
     this.lastVx = actions.moveX * this.loadout.speed;
-    this.lastVy = actions.moveY * this.loadout.speed;
+    this.lastVy = actions.moveY * this.loadout.speed * (this.kit.float ?? 1);
     this.player.setVelocity(0, 0);
 
     let x = this.player.x + this.lastVx * dt;
@@ -643,10 +665,13 @@ export class GameScene extends Phaser.Scene {
     if (actions.bomb && this.bombCd <= 0 && this.bombs > 0) {
       this.bombCd = BOMB_COOLDOWN;
       this.bombs -= 1;
-      const bomb = this.bombGroup.get(this.player.x, this.player.y + 24) as Bomb | null;
-      if (bomb) {
-        bomb.drop(this.player.x, this.player.y + 24);
-        audio.bombDrop();
+      if (this.kit.secondary === "laser") this.fireBurst();
+      else {
+        const bomb = this.bombGroup.get(this.player.x, this.player.y + 24) as Bomb | null;
+        if (bomb) {
+          bomb.drop(this.player.x, this.player.y + 24, this.kit.grav ?? 1);
+          audio.bombDrop();
+        }
       }
       this.syncHud();
       this.trySpawnCrate();
@@ -751,6 +776,37 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private fireBurst() {
+    const x = this.player.x + 10;
+    const y = this.player.y + 18;
+    const diag = LASER_SPEED * Math.SQRT1_2;
+    this.spawnLaser(x, y, diag, diag);
+    audio.bombDrop();
+  }
+
+  private spawnLaser(x: number, y: number, vx: number, vy: number) {
+    const bolt = this.laserGroup.get(x, y) as LaserBolt | null;
+    bolt?.fire(x, y, vx, vy);
+  }
+
+  private lasersFly() {
+    if (!this.hm) return;
+    for (const child of this.laserGroup.getChildren()) {
+      const bolt = child as LaserBolt;
+      if (!bolt.active) continue;
+      const gy = this.solidFloor(this.worldX + bolt.x);
+      if (bolt.y >= gy - 6) bolt.disableBody(true, true);
+    }
+  }
+
+  private hitLaser(bolt: LaserBolt, truck: Truck) {
+    if (!bolt.active || !truck.active) return;
+    bolt.disableBody(true, true);
+    this.trauma = Math.min(1, this.trauma + this.loadout.bombTrauma);
+    audio.boom();
+    this.killTruck(truck);
+  }
+
   private cratesFall() {
     if (!this.hm || this.dead) return;
     for (const child of this.crates.getChildren()) {
@@ -778,7 +834,12 @@ export class GameScene extends Phaser.Scene {
   private spawnCrate() {
     const x = Phaser.Math.Clamp(this.player.x + 48, PLAYER_X_MIN + 40, PLAYER_X_MAX - 16);
     const crate = this.crates.get(x, -36) as CrateDrop | null;
-    crate?.drop(x, -36);
+    crate?.drop(
+      x,
+      -36,
+      CRATE_FALL_SPEED * (this.kit.grav ?? 1),
+      this.kit.secondary === "laser" ? "BURST" : "BOMB",
+    );
   }
 
   private snagCrate(crate: CrateDrop) {
@@ -912,6 +973,9 @@ export class GameScene extends Phaser.Scene {
       anim,
       hp,
     });
+    if (e && (this.kit.grav ?? 1) < 0.9 && kind !== "boss") {
+      e.setVelocityY((Math.random() - 0.5) * 88);
+    }
   }
 
   private waterLine(wx: number): number {

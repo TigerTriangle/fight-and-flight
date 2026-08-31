@@ -51,6 +51,9 @@ export type StageKit = {
   scroll?: number;
   airSpeed?: number;
   aaShot?: number;
+  grav?: number;
+  float?: number;
+  secondary?: "bomb" | "laser";
   groundSink?: number;
   bankSink?: number;
   enemyBoss?: string;
@@ -143,8 +146,9 @@ export const WORLDS: WorldDef[] = [
     name: "Pale Mare",
     tag: "moon",
     open: false,
-    placeholder: true,
-    briefing: "",
+    placeholder: false,
+    briefing:
+      "Thin dust over the mare. Hoppers float; rovers and flak hold the craters. Burst the crater line — no bombs here. Break the Walker at the end.",
   },
   {
     id: "vermillion",
@@ -423,6 +427,46 @@ const ORBIT_KIT: StageKit = {
   hp: { truck: 8, aa: 11, tank: 16, trainer: 1, fighter: 6, heavy: 8, boss: 30 },
 };
 
+const MARE_KIT: StageKit = {
+  sky: "mare-sky",
+  far: "mare-far",
+  mid: "mare-mid",
+  near: "mare-near",
+  ground: "mare-ground",
+  fg: "mare-fg",
+  heightmap: "mare-heightmap",
+  enemy: "mare-hopper",
+  enemyAnim: "mare-hopper-fly",
+  enemyBoss: "mare-walker",
+  enemyBossAnim: "mare-walker-fly",
+  truck: "lunar-rover",
+  tank: "lunar-crawler",
+  aa: "lunar-aa",
+  truckAnim: "lunar-rover-idle",
+  tankAnim: "lunar-crawler-idle",
+  aaAnim: "lunar-aa-idle",
+  radar: false,
+  decor: [
+    { key: "moon-rock", scale: 0.14, plant: 4 },
+    { key: "moon-antenna", scale: 0.16, plant: 6 },
+    { key: "moon-lander", scale: 0.14, plant: 8 },
+    { key: "moon-rock", scale: 0.11, plant: 4 },
+  ],
+  decorEvery: 4.2,
+  groundDrawH: 150,
+  yMin: 48,
+  startY: 200,
+  airMin: 70,
+  airMax: 400,
+  scroll: 336,
+  airSpeed: 1.72,
+  aaShot: 500,
+  grav: 0.38,
+  float: 0.82,
+  secondary: "laser",
+  hp: { truck: 9, aa: 12, tank: 18, trainer: 1, fighter: 7, heavy: 9, boss: 34 },
+};
+
 export function stageKit(id: string | undefined | null): StageKit {
   if (id === "tidefront") return TIDE_KIT;
   if (id === "canyon") return CANYON_KIT;
@@ -430,5 +474,6 @@ export function stageKit(id: string | undefined | null): StageKit {
   if (id === "canopy") return CANOPY_KIT;
   if (id === "underdark") return DARK_KIT;
   if (id === "orbit") return ORBIT_KIT;
+  if (id === "mare") return MARE_KIT;
   return HEARTLAND_KIT;
 }
