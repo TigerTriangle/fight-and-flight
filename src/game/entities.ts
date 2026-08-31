@@ -230,7 +230,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
           aaTex === "jungle-aa" ||
           aaTex === "cave-aa" ||
           aaTex === "gun-sat" ||
-          aaTex === "lunar-aa"
+          aaTex === "lunar-aa" ||
+          aaTex === "spore-turret"
           ? 0.88
           : 0.9,
       );
@@ -248,7 +249,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
               tankTex === "jungle-halftrack" ||
               tankTex === "drill-tank" ||
               tankTex === "barge-hulk" ||
-              tankTex === "lunar-crawler"
+              tankTex === "lunar-crawler" ||
+              tankTex === "spore-carapace"
             ? 0.86
             : 0.78,
       );
@@ -263,7 +265,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
           truckTex === "sampan" ||
           truckTex === "minecart" ||
           truckTex === "cargo-hulk" ||
-          truckTex === "lunar-rover"
+          truckTex === "lunar-rover" ||
+          truckTex === "spore-beetle"
           ? 0.7
           : truckTex === "snowcat"
             ? 0.62

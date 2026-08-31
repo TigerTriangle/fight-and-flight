@@ -246,6 +246,36 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image("moon-rock", `/game/moon-rock.png${v}`);
     this.load.image("moon-antenna", `/game/moon-antenna.png${v}`);
     this.load.image("moon-lander", `/game/moon-lander.png${v}`);
+    this.load.image("verm-sky", `/game/verm-sky.png${v}`);
+    this.load.image("verm-far", `/game/verm-far.png${v}`);
+    this.load.image("verm-mid", `/game/verm-mid.png${v}`);
+    this.load.image("verm-near", `/game/verm-near.png${v}`);
+    this.load.image("verm-fg", `/game/verm-fg.png${v}`);
+    this.load.image("verm-ground", `/game/verm-ground.png${v}`);
+    this.load.json("verm-heightmap", `/game/verm-heightmap.json${v}`);
+    this.load.spritesheet("verm-moth", `/game/verm-moth.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("verm-bloom", `/game/verm-bloom.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("spore-beetle", `/game/spore-beetle.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("spore-carapace", `/game/spore-carapace.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("spore-turret", `/game/spore-turret.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.image("spore-stack", `/game/spore-stack.png${v}`);
+    this.load.image("mesa-spire", `/game/mesa-spire.png${v}`);
+    this.load.image("bone-arch", `/game/bone-arch.png${v}`);
   }
 
   create() {
@@ -351,11 +381,23 @@ export class PreloadScene extends Phaser.Scene {
       ["lunar-rover", "lunar-rover-idle"],
       ["lunar-crawler", "lunar-crawler-idle"],
       ["lunar-aa", "lunar-aa-idle"],
+      ["verm-moth", "verm-moth-fly"],
+      ["verm-bloom", "verm-bloom-fly"],
+      ["spore-beetle", "spore-beetle-idle"],
+      ["spore-carapace", "spore-carapace-idle"],
+      ["spore-turret", "spore-turret-idle"],
     ] as const) {
       this.anims.create({
         key: anim,
         frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
-        frameRate: key.endsWith("enemy") || key.endsWith("boss") || key.endsWith("drone") ? 9 : 6,
+        frameRate:
+          key.endsWith("enemy") ||
+          key.endsWith("boss") ||
+          key.endsWith("drone") ||
+          key.endsWith("moth") ||
+          key.endsWith("bloom")
+            ? 9
+            : 6,
         repeat: -1,
       });
     }

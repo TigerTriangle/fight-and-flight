@@ -156,8 +156,9 @@ export const WORLDS: WorldDef[] = [
     name: "Vermillion",
     tag: "alien world",
     open: false,
-    placeholder: true,
-    briefing: "",
+    placeholder: false,
+    briefing:
+      "Alien mesas and spore stacks. Moths in the lane, crawlers on the rust. Burst the turrets — no bombs here. Clip the wings for racks. Break the Bloom at the end.",
   },
   {
     id: "lumenfall",
@@ -467,6 +468,44 @@ const MARE_KIT: StageKit = {
   hp: { truck: 9, aa: 12, tank: 18, trainer: 1, fighter: 7, heavy: 9, boss: 34 },
 };
 
+const VERM_KIT: StageKit = {
+  sky: "verm-sky",
+  far: "verm-far",
+  mid: "verm-mid",
+  near: "verm-near",
+  ground: "verm-ground",
+  fg: "verm-fg",
+  heightmap: "verm-heightmap",
+  enemy: "verm-moth",
+  enemyAnim: "verm-moth-fly",
+  enemyBoss: "verm-bloom",
+  enemyBossAnim: "verm-bloom-fly",
+  truck: "spore-beetle",
+  tank: "spore-carapace",
+  aa: "spore-turret",
+  truckAnim: "spore-beetle-idle",
+  tankAnim: "spore-carapace-idle",
+  aaAnim: "spore-turret-idle",
+  radar: false,
+  decor: [
+    { key: "spore-stack", scale: 0.16, plant: 6 },
+    { key: "mesa-spire", scale: 0.14, plant: 4 },
+    { key: "bone-arch", scale: 0.15, plant: 8 },
+    { key: "spore-stack", scale: 0.12, plant: 6 },
+  ],
+  decorEvery: 4.0,
+  groundDrawH: 150,
+  yMin: 48,
+  startY: 200,
+  airMin: 70,
+  airMax: 400,
+  scroll: 358,
+  airSpeed: 1.82,
+  aaShot: 530,
+  secondary: "laser",
+  hp: { truck: 10, aa: 13, tank: 20, trainer: 1, fighter: 8, heavy: 10, boss: 38 },
+};
+
 export function stageKit(id: string | undefined | null): StageKit {
   if (id === "tidefront") return TIDE_KIT;
   if (id === "canyon") return CANYON_KIT;
@@ -475,5 +514,6 @@ export function stageKit(id: string | undefined | null): StageKit {
   if (id === "underdark") return DARK_KIT;
   if (id === "orbit") return ORBIT_KIT;
   if (id === "mare") return MARE_KIT;
+  if (id === "vermillion") return VERM_KIT;
   return HEARTLAND_KIT;
 }
