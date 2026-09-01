@@ -802,6 +802,15 @@ export class GameScene extends Phaser.Scene {
   private hitLaser(bolt: LaserBolt, truck: Truck) {
     if (!bolt.active || !truck.active) return;
     bolt.disableBody(true, true);
+    if (truck.kind === "aa") {
+      const result = truck.tagFromLaser();
+      if (result === "stun") {
+        this.playFx(truck.x, truck.y - 48, "hit");
+        audio.spark();
+        this.trauma = Math.min(1, this.trauma + 0.12);
+        return;
+      }
+    }
     this.trauma = Math.min(1, this.trauma + this.loadout.bombTrauma);
     audio.boom();
     this.killTruck(truck);
@@ -1089,7 +1098,7 @@ export class GameScene extends Phaser.Scene {
   private groundGuns(dt: number) {
     for (const child of this.trucks.getChildren()) {
       const truck = child as Truck;
-      if (!truck.active || truck.kind !== "aa") continue;
+      if (!truck.active || truck.kind !== "aa" || truck.isStunned()) continue;
       truck.fireAcc -= dt;
       if (truck.fireAcc > 0 || truck.x > GAME_WIDTH - 30 || truck.x < 160) continue;
       truck.fireAcc = 1.55;
@@ -1114,7 +1123,7 @@ export class GameScene extends Phaser.Scene {
     truck.hp -= bullet.dmg;
     truck.setTintFill(0xffffff);
     this.time.delayedCall(40, () => {
-      if (truck.active) truck.clearTint();
+      if (truck.active) truck.refreshTint();
     });
     this.playFx(truck.x, truck.y - 56, "hit");
     audio.spark();

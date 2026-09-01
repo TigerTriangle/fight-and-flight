@@ -5,6 +5,7 @@ import {
   BULLET_SPEED,
   CRATE_FALL_SPEED,
   ENEMY_BULLET_SPEED,
+  LASER_STUN_MS,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
 } from "./config";
@@ -177,6 +178,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
   fireAcc = 1.2;
   ground = true;
   ledge = 0;
+  laserHits = 0;
+  private stunUntil = 0;
   private radar: Phaser.GameObjects.Sprite | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -204,6 +207,9 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
   ) {
     this.kind = kind;
     this.ledge = 0;
+    this.laserHits = 0;
+    this.stunUntil = 0;
+    this.anims.resume();
     this.hp =
       kind === "tank"
         ? (art?.hpTank ?? HP_TANK)
@@ -285,6 +291,30 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
     }
     this.placeRadar();
     if (this.x < -240) this.disableBody(true, true);
+    if (this.stunUntil && this.scene.time.now >= this.stunUntil) {
+      this.stunUntil = 0;
+      this.anims.resume();
+      this.refreshTint();
+    }
+  }
+
+  isStunned() {
+    return this.scene.time.now < this.stunUntil;
+  }
+
+  tagFromLaser(): "stun" | "kill" {
+    this.laserHits += 1;
+    if (this.laserHits >= 2) return "kill";
+    this.stunUntil = this.scene.time.now + LASER_STUN_MS;
+    this.anims.pause();
+    this.refreshTint();
+    return "stun";
+  }
+
+  refreshTint() {
+    if (this.isStunned()) this.setTint(0x4de8ff);
+    else if (this.laserHits > 0) this.setTint(0x9fd4ee);
+    else this.clearTint();
   }
 
   disableBody(disableGameObject?: boolean, hideGameObject?: boolean) {
