@@ -1086,11 +1086,20 @@ export class GameScene extends Phaser.Scene {
       en.fireAcc -= dt;
       if (en.fireAcc <= 0 && en.x < GAME_WIDTH - 40 && en.x > 280) {
         en.fireAcc = en.kind === "heavy" ? 1.7 : 1.35 + Math.random() * 0.5;
-        const b = this.eBullets.get(en.x - 40, en.y + 6) as Bullet | null;
+        const spit = this.kit.airProj === "fireball";
+        const mx = en.x - (spit ? 54 : 40);
+        const my = en.y + (spit ? 14 : 6);
+        const b = this.eBullets.get(mx, my) as Bullet | null;
         if (!b) continue;
-        b.fire(en.x - 40, en.y + 6, false);
-        const evx = (en.body as Phaser.Physics.Arcade.Body | null)?.velocity.x ?? -220;
-        b.setVelocity(Math.min(-ENEMY_BULLET_SPEED, evx - 220), 0);
+        if (spit) {
+          b.fire(mx, my, false, { texture: "fireball", anim: "fireball-fly", scale: 0.48 });
+          const evx = (en.body as Phaser.Physics.Arcade.Body | null)?.velocity.x ?? -220;
+          b.setVelocity(Math.min(-ENEMY_BULLET_SPEED, evx - 180), 0);
+        } else {
+          b.fire(mx, my, false);
+          const evx = (en.body as Phaser.Physics.Arcade.Body | null)?.velocity.x ?? -220;
+          b.setVelocity(Math.min(-ENEMY_BULLET_SPEED, evx - 220), 0);
+        }
       }
     }
   }

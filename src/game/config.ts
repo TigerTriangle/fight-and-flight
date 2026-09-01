@@ -37,6 +37,6 @@ export const CRATE_FALL_SPEED = 76;
 export const LASER_SPEED = 1400;
 export const LASER_STUN_MS = 1000;
 
-export const ART_REV = 53;
+export const ART_REV = 55;
 export const HIGH_SCORE_KEY = "fnf-highscore-v1";
 export const CLEARED_KEY = "fnf-cleared-v1";

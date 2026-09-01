@@ -54,6 +54,7 @@ export type StageKit = {
   grav?: number;
   float?: number;
   secondary?: "bomb" | "laser";
+  airProj?: "bullet" | "fireball";
   groundSink?: number;
   bankSink?: number;
   enemyBoss?: string;
@@ -166,8 +167,9 @@ export const WORLDS: WorldDef[] = [
     name: "Lumenfall",
     tag: "fantasy",
     open: false,
-    placeholder: true,
-    briefing: "",
+    placeholder: false,
+    briefing:
+      "Floating isles and lantern light. Wyverns in the lane, golems on the stone. Burst the spires — no bombs here. Clip the wings for racks. Break the Lumen at the end.",
   },
 ];
 
@@ -506,6 +508,45 @@ const VERM_KIT: StageKit = {
   hp: { truck: 10, aa: 13, tank: 20, trainer: 1, fighter: 8, heavy: 10, boss: 38 },
 };
 
+const LUMEN_KIT: StageKit = {
+  sky: "lum-sky",
+  far: "lum-far",
+  mid: "lum-mid",
+  near: "lum-near",
+  ground: "lum-ground",
+  fg: "lum-fg",
+  heightmap: "lum-heightmap",
+  enemy: "lum-wyvern",
+  enemyAnim: "lum-wyvern-fly",
+  enemyBoss: "lum-seraph",
+  enemyBossAnim: "lum-seraph-fly",
+  truck: "rune-golem",
+  tank: "isle-behemoth",
+  aa: "lumen-spire",
+  truckAnim: "rune-golem-idle",
+  tankAnim: "isle-behemoth-idle",
+  aaAnim: "lumen-spire-idle",
+  radar: false,
+  decor: [
+    { key: "rune-obelisk", scale: 0.14, plant: 6 },
+    { key: "crystal-tree", scale: 0.13, plant: 4 },
+    { key: "lumen-lantern", scale: 0.15, plant: 8 },
+    { key: "rune-obelisk", scale: 0.11, plant: 6 },
+  ],
+  decorEvery: 3.8,
+  groundDrawH: 150,
+  yMin: 48,
+  startY: 190,
+  airMin: 70,
+  airMax: 400,
+  scroll: 380,
+  airSpeed: 1.92,
+  aaShot: 560,
+  secondary: "laser",
+  airProj: "fireball",
+  hp: { truck: 11, aa: 14, tank: 22, trainer: 1, fighter: 9, heavy: 11, boss: 42 },
+};
+
 export function stageKit(id: string | undefined | null): StageKit {
   if (id === "tidefront") return TIDE_KIT;
   if (id === "canyon") return CANYON_KIT;
@@ -515,5 +556,6 @@ export function stageKit(id: string | undefined | null): StageKit {
   if (id === "orbit") return ORBIT_KIT;
   if (id === "mare") return MARE_KIT;
   if (id === "vermillion") return VERM_KIT;
+  if (id === "lumenfall") return LUMEN_KIT;
   return HEARTLAND_KIT;
 }

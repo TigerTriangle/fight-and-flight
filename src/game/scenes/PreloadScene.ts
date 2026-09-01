@@ -54,6 +54,10 @@ export class PreloadScene extends Phaser.Scene {
       frameHeight: 128,
     });
     this.load.image("laser-bolt", `/game/laser-bolt.png${v}`);
+    this.load.spritesheet("fireball", `/game/fireball.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("crate", `/game/crate.png${v}`, {
       frameWidth: 192,
       frameHeight: 192,
@@ -276,6 +280,36 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image("spore-stack", `/game/spore-stack.png${v}`);
     this.load.image("mesa-spire", `/game/mesa-spire.png${v}`);
     this.load.image("bone-arch", `/game/bone-arch.png${v}`);
+    this.load.image("lum-sky", `/game/lum-sky.png${v}`);
+    this.load.image("lum-far", `/game/lum-far.png${v}`);
+    this.load.image("lum-mid", `/game/lum-mid.png${v}`);
+    this.load.image("lum-near", `/game/lum-near.png${v}`);
+    this.load.image("lum-fg", `/game/lum-fg.png${v}`);
+    this.load.image("lum-ground", `/game/lum-ground.png${v}`);
+    this.load.json("lum-heightmap", `/game/lum-heightmap.json${v}`);
+    this.load.spritesheet("lum-wyvern", `/game/lum-wyvern.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("lum-seraph", `/game/lum-seraph.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("rune-golem", `/game/rune-golem.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("isle-behemoth", `/game/isle-behemoth.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("lumen-spire", `/game/lumen-spire.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.image("rune-obelisk", `/game/rune-obelisk.png${v}`);
+    this.load.image("lumen-lantern", `/game/lumen-lantern.png${v}`);
+    this.load.image("crystal-tree", `/game/crystal-tree.png${v}`);
   }
 
   create() {
@@ -320,6 +354,12 @@ export class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: "bullet-fly",
       frames: this.anims.generateFrameNumbers("bullet", { start: 0, end: 3 }),
+      frameRate: 14,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "fireball-fly",
+      frames: this.anims.generateFrameNumbers("fireball", { start: 0, end: 3 }),
       frameRate: 14,
       repeat: -1,
     });
@@ -386,18 +426,25 @@ export class PreloadScene extends Phaser.Scene {
       ["spore-beetle", "spore-beetle-idle"],
       ["spore-carapace", "spore-carapace-idle"],
       ["spore-turret", "spore-turret-idle"],
+      ["lum-wyvern", "lum-wyvern-fly"],
+      ["lum-seraph", "lum-seraph-fly"],
+      ["rune-golem", "rune-golem-idle"],
+      ["isle-behemoth", "isle-behemoth-idle"],
+      ["lumen-spire", "lumen-spire-idle"],
     ] as const) {
       this.anims.create({
         key: anim,
         frames: this.anims.generateFrameNumbers(key, { start: 0, end: 3 }),
         frameRate:
-          key.endsWith("enemy") ||
-          key.endsWith("boss") ||
-          key.endsWith("drone") ||
-          key.endsWith("moth") ||
-          key.endsWith("bloom")
-            ? 9
-            : 6,
+          key.endsWith("wyvern") || key.endsWith("seraph")
+            ? 12
+            : key.endsWith("enemy") ||
+                key.endsWith("boss") ||
+                key.endsWith("drone") ||
+                key.endsWith("moth") ||
+                key.endsWith("bloom")
+              ? 9
+              : 6,
         repeat: -1,
       });
     }

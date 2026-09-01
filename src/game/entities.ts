@@ -30,7 +30,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     x: number,
     y: number,
     fromPlayer: boolean,
-    opts?: { dmg?: number; scale?: number; tint?: number; weave?: number; fromAa?: boolean },
+    opts?: { dmg?: number; scale?: number; tint?: number; weave?: number; fromAa?: boolean; texture?: string; anim?: string },
   ) {
     this.fromPlayer = fromPlayer;
     this.fromAa = !fromPlayer && !!opts?.fromAa;
@@ -39,12 +39,18 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     this.weaveT = 0;
     this.enableBody(true, x, y, true, true);
     this.setDepth(70);
+    const tex = opts?.texture ?? "bullet";
+    if (this.texture.key !== tex) this.setTexture(tex);
     this.setScale(opts?.scale ?? (fromPlayer ? 0.34 : 0.3));
-    this.setFlipX(!fromPlayer);
-    this.setTint(opts?.tint ?? (fromPlayer ? 0xffffff : 0xff8866));
+    this.setFlipX(tex === "fireball" ? false : !fromPlayer);
+    if (opts?.tint != null) this.setTint(opts.tint);
+    else if (fromPlayer) this.clearTint();
+    else if (tex === "fireball") this.clearTint();
+    else this.setTint(0xff8866);
     this.setVelocity(fromPlayer ? BULLET_SPEED : -ENEMY_BULLET_SPEED, 0);
-    this.play("bullet-fly", true);
-    bodyOf(this)?.setSize(96, 36).setOffset(16, 46);
+    this.play(opts?.anim ?? "bullet-fly", true);
+    if (tex === "fireball") bodyOf(this)?.setSize(88, 88).setOffset(84, 84);
+    else bodyOf(this)?.setSize(96, 36).setOffset(16, 46);
   }
 
   preUpdate(time: number, delta: number) {
@@ -54,7 +60,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
       this.weaveT += delta * 0.014;
       this.setVelocityY(Math.sin(this.weaveT) * this.weave);
     }
-    if (this.x > 1360 || this.x < -80) this.disableBody(true, true);
+    if (this.x > 1360 || this.x < -80 || this.y > 800 || this.y < -80) this.disableBody(true, true);
   }
 }
 
@@ -237,7 +243,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
           aaTex === "cave-aa" ||
           aaTex === "gun-sat" ||
           aaTex === "lunar-aa" ||
-          aaTex === "spore-turret"
+          aaTex === "spore-turret" ||
+          aaTex === "lumen-spire"
           ? 0.88
           : 0.9,
       );
@@ -256,7 +263,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
               tankTex === "drill-tank" ||
               tankTex === "barge-hulk" ||
               tankTex === "lunar-crawler" ||
-              tankTex === "spore-carapace"
+              tankTex === "spore-carapace" ||
+              tankTex === "isle-behemoth"
             ? 0.86
             : 0.78,
       );
@@ -272,7 +280,8 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
           truckTex === "minecart" ||
           truckTex === "cargo-hulk" ||
           truckTex === "lunar-rover" ||
-          truckTex === "spore-beetle"
+          truckTex === "spore-beetle" ||
+          truckTex === "rune-golem"
           ? 0.7
           : truckTex === "snowcat"
             ? 0.62
