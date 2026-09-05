@@ -34,6 +34,9 @@ type GameStore = {
   hullMax: number;
   bombs: number;
   bombsMax: number;
+  special: number;
+  specialMax: number;
+  specialName: string;
   score: number;
   gunHeat: number;
   gunHot: boolean;
@@ -62,6 +65,9 @@ type GameStore = {
     hullMax?: number;
     bombs?: number;
     bombsMax?: number;
+    special?: number;
+    specialMax?: number;
+    specialName?: string;
     score?: number;
     gunHeat?: number;
     gunHot?: boolean;
@@ -120,6 +126,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hullMax: planeById(DEFAULT_PLANE).hull,
   bombs: planeById(DEFAULT_PLANE).bombs,
   bombsMax: planeById(DEFAULT_PLANE).bombs,
+  special: planeById(DEFAULT_PLANE).special?.start ?? 0,
+  specialMax: planeById(DEFAULT_PLANE).special?.max ?? 0,
+  specialName: planeById(DEFAULT_PLANE).special?.short ?? "",
   score: 0,
   gunHeat: 0,
   gunHot: false,
@@ -157,6 +166,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hullMax: p.hull,
       bombs: p.bombs,
       bombsMax: p.bombs,
+      special: p.special?.start ?? 0,
+      specialMax: p.special?.max ?? 0,
+      specialName: p.special?.short ?? "",
     });
     persist(get);
   },
@@ -220,6 +232,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hullMax: p.hull,
       bombs: p.bombs,
       bombsMax: p.bombs,
+      special: p.special?.start ?? 0,
+      specialMax: p.special?.max ?? 0,
+      specialName: p.special?.short ?? "",
       score: 0,
       gunHeat: 0,
       gunHot: false,
@@ -251,6 +266,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hullMax: p.hull,
       bombs: p.bombs,
       bombsMax: p.bombs,
+      special: p.special?.start ?? 0,
+      specialMax: p.special?.max ?? 0,
+      specialName: p.special?.short ?? "",
     });
     persist(get);
     return true;

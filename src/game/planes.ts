@@ -6,6 +6,15 @@ export type PlaneId =
   | "leviathan"
   | "wisp";
 
+export type PlaneSpecial = {
+  id: "flares" | "missile";
+  name: string;
+  short: string;
+  max: number;
+  start: number;
+  scorePer: number;
+};
+
 export type PlaneDef = {
   id: PlaneId;
   name: string;
@@ -32,6 +41,7 @@ export type PlaneDef = {
   trim: number;
   portrait: string;
   bars: { speed: number; armor: number; guns: number; bombs: number };
+  special?: PlaneSpecial;
 };
 
 export const PLANES: PlaneDef[] = [
@@ -61,6 +71,7 @@ export const PLANES: PlaneDef[] = [
     trim: 0.11,
     portrait: "/hangar/sparrow.png",
     bars: { speed: 5, armor: 2, guns: 5, bombs: 2 },
+    special: { id: "flares", name: "Nose Flares", short: "Flare", max: 2, start: 1, scorePer: 1000 },
   },
   {
     id: "hornet",
@@ -88,6 +99,7 @@ export const PLANES: PlaneDef[] = [
     trim: 0,
     portrait: "/hangar/hornet.png",
     bars: { speed: 3, armor: 3, guns: 3, bombs: 3 },
+    special: { id: "missile", name: "Heat-Seeker", short: "Lock", max: 2, start: 1, scorePer: 1200 },
   },
   {
     id: "thunderhog",

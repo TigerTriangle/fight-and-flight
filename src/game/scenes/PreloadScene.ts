@@ -58,6 +58,14 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("flare", `/game/flare.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("missile", `/game/missile.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("crate", `/game/crate.png${v}`, {
       frameWidth: 192,
       frameHeight: 192,
@@ -361,6 +369,18 @@ export class PreloadScene extends Phaser.Scene {
       key: "fireball-fly",
       frames: this.anims.generateFrameNumbers("fireball", { start: 0, end: 3 }),
       frameRate: 14,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "flare-burn",
+      frames: this.anims.generateFrameNumbers("flare", { start: 0, end: 3 }),
+      frameRate: 16,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "missile-fly",
+      frames: this.anims.generateFrameNumbers("missile", { start: 0, end: 3 }),
+      frameRate: 18,
       repeat: -1,
     });
     this.anims.create({

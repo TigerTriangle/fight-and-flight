@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { audio } from "@/game/audio";
 import { bridge } from "@/game/bridge";
+import { ART_REV } from "@/game/config";
 import { planeById } from "@/game/planes";
 import { isWorldOpen, worldById } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
@@ -13,9 +14,10 @@ export function BriefingScreen() {
   const world = worldById(worldId);
   const plane = planeById(planeId);
   const open = isWorldOpen(world.id, clearedWorlds);
+  const locked = !open || world.placeholder;
 
   const fly = () => {
-    if (!open || world.placeholder) return;
+    if (locked) return;
     audio.unlock();
     useGameStore.getState().resetRun();
     useGameStore.getState().setPhase("playing");
@@ -39,30 +41,40 @@ export function BriefingScreen() {
   return (
     <div
       data-ui
-      className="absolute inset-0 z-20 flex items-end justify-center bg-bg/65 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:items-center sm:pb-8"
+      className="absolute inset-0 z-20 flex flex-col bg-bg/80 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-6"
     >
-      <div className="w-full max-w-md rounded-[var(--radius-xl)] border border-border bg-surface/95 p-5 sm:p-6">
-        <p className="font-display text-sm uppercase tracking-[0.22em] text-accent">
-          Briefing
+      <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
+        <p className="shrink-0 text-center font-display text-xs uppercase tracking-[0.28em] text-accent sm:text-sm">
+          Theater {world.index} · {world.name}
         </p>
-        <h2 className="mt-2 font-display text-4xl leading-none tracking-tight text-fg sm:text-5xl">
-          {world.name}
-        </h2>
-        <p className="mt-1 text-sm text-muted">
+        <figure className="relative mx-auto mt-2 min-h-0 w-full max-w-[22rem] flex-1 sm:max-w-sm">
+          <img
+            src={`/game/${world.poster}.jpg?v=${ART_REV}`}
+            alt={`${world.name} recruitment poster. ${world.slogan}`}
+            className="mx-auto h-full max-h-[min(58vh,620px)] w-auto rounded-sm object-contain shadow-[0_18px_40px_rgba(0,0,0,0.55)] sm:max-h-[min(64vh,680px)]"
+            decoding="async"
+          />
+          <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#1c1610] via-[#1c1610]/92 to-transparent px-3 pb-3 pt-10 text-center sm:px-4 sm:pb-4">
+            <p className="whitespace-pre-line font-display text-lg leading-tight tracking-wide text-[#f3e6c8] sm:text-xl">
+              {world.slogan}
+            </p>
+          </figcaption>
+        </figure>
+        <p className="mt-3 text-center text-sm text-muted">
           {plane.name}
-          {open && world.placeholder ? " · Charts unfinished" : ""}
+          {world.placeholder ? " · Charts unfinished" : ""}
         </p>
-        <p className="mt-4 font-sans text-base leading-relaxed text-fg">
+        <p className="mx-auto mt-1 max-w-md text-center font-sans text-sm leading-relaxed text-fg/90">
           {world.briefing || "This theater is still being painted."}
         </p>
-        <div className="mt-6 flex flex-col gap-3">
+        <div className="mt-4 flex shrink-0 flex-col gap-2 sm:mt-5 sm:gap-3">
           <Button
             size="lg"
             className="font-display text-2xl tracking-wide"
-            disabled={!open || world.placeholder}
+            disabled={locked}
             onClick={fly}
           >
-            {!open || world.placeholder ? "Coming online" : "Fly"}
+            {locked ? "Coming online" : "Fly"}
           </Button>
           <Button variant="secondary" onClick={back}>
             Theaters

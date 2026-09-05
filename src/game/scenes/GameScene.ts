@@ -20,6 +20,8 @@ import {
   PLAYER_X_MIN,
   PLAYER_Y_MIN,
   SCROLL_SPEED,
+  SPECIAL_COOLDOWN,
+  FLARE_COUNT,
 } from "../config";
 import {
   SCORE_AA_BOMB,
@@ -46,6 +48,8 @@ import {
   Bullet,
   CrateDrop,
   EnemyFighter,
+  Flare,
+  HeatMissile,
   FxSprite,
   LaserBolt,
   Truck,
@@ -101,6 +105,18 @@ function asLaser(obj: unknown): LaserBolt | null {
   return null;
 }
 
+function asMissile(obj: unknown): HeatMissile | null {
+  const s = asSprite(obj);
+  if (s && "target" in s && s.texture?.key === "missile") return s as HeatMissile;
+  return null;
+}
+
+function asFlare(obj: unknown): Flare | null {
+  const s = asSprite(obj);
+  if (s && "life" in s && s.texture?.key === "flare") return s as Flare;
+  return null;
+}
+
 function asTruck(obj: unknown): Truck | null {
   const s = asSprite(obj);
   if (s && "ground" in s) return s as Truck;
@@ -113,6 +129,10 @@ export class GameScene extends Phaser.Scene {
   private loadout: PlaneDef = planeById("hornet");
   private hull = 3;
   private bombs = 4;
+  private special = 0;
+  private specialBank = 0;
+  private scoreSeen = 0;
+  private specialCd = 0;
   private score = 0;
   private dead = false;
   private gunCd = 0;
@@ -160,6 +180,8 @@ export class GameScene extends Phaser.Scene {
   private eBullets!: Phaser.Physics.Arcade.Group;
   private bombGroup!: Phaser.Physics.Arcade.Group;
   private laserGroup!: Phaser.Physics.Arcade.Group;
+  private flareGroup!: Phaser.Physics.Arcade.Group;
+  private missileGroup!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private trucks!: Phaser.Physics.Arcade.Group;
   private crates!: Phaser.Physics.Arcade.Group;
@@ -177,6 +199,10 @@ export class GameScene extends Phaser.Scene {
     this.loadout = planeById(useGameStore.getState().planeId);
     this.hull = this.loadout.hull;
     this.bombs = this.loadout.bombs;
+    this.special = this.loadout.special?.start ?? 0;
+    this.specialBank = 0;
+    this.scoreSeen = 0;
+    this.specialCd = 0;
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
@@ -256,6 +282,16 @@ export class GameScene extends Phaser.Scene {
       maxSize: 16,
       runChildUpdate: true,
     });
+    this.flareGroup = this.physics.add.group({
+      classType: Flare,
+      maxSize: 12,
+      runChildUpdate: true,
+    });
+    this.missileGroup = this.physics.add.group({
+      classType: HeatMissile,
+      maxSize: 6,
+      runChildUpdate: true,
+    });
     this.enemies = this.physics.add.group({
       classType: EnemyFighter,
       maxSize: 24,
@@ -293,6 +329,16 @@ export class GameScene extends Phaser.Scene {
       const bullet = asBullet(a) ?? asBullet(b);
       const enemy = asEnemy(a) ?? asEnemy(b);
       if (bullet && enemy) this.hitAir(bullet, enemy);
+    });
+    this.physics.add.overlap(this.missileGroup, this.enemies, (a, b) => {
+      const missile = asMissile(a) ?? asMissile(b);
+      const enemy = asEnemy(a) ?? asEnemy(b);
+      if (missile && enemy) this.hitMissile(missile, enemy);
+    });
+    this.physics.add.overlap(this.eBullets, this.flareGroup, (a, b) => {
+      const bullet = asBullet(a) ?? asBullet(b);
+      const flare = asFlare(a) ?? asFlare(b);
+      if (bullet && flare) this.eatFlare(bullet, flare);
     });
     this.physics.add.overlap(this.eBullets, this.player, (a) => {
       const bullet = asBullet(a);
@@ -412,6 +458,9 @@ export class GameScene extends Phaser.Scene {
       this.lasersFly();
       this.cratesFall();
       this.steerDarts();
+      this.steerDecoys();
+      this.lockMissiles();
+      this.flaresFall();
       this.enemyGuns(dt);
       this.groundGuns(dt);
       this.terrainKill();
@@ -455,6 +504,8 @@ export class GameScene extends Phaser.Scene {
       this.eBullets,
       this.bombGroup,
       this.laserGroup,
+      this.flareGroup,
+      this.missileGroup,
       this.enemies,
       this.trucks,
       this.crates,
@@ -478,6 +529,10 @@ export class GameScene extends Phaser.Scene {
     this.loadout = planeById(useGameStore.getState().planeId);
     this.hull = this.loadout.hull;
     this.bombs = this.loadout.bombs;
+    this.special = this.loadout.special?.start ?? 0;
+    this.specialBank = 0;
+    this.scoreSeen = 0;
+    this.specialCd = 0;
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
@@ -662,6 +717,7 @@ export class GameScene extends Phaser.Scene {
   private combat(actions: ReturnType<typeof input.sample>, dt: number) {
     this.tickGun(actions.fire, dt);
     this.bombCd = Math.max(0, this.bombCd - dt);
+    this.specialCd = Math.max(0, this.specialCd - dt);
     if (actions.bomb && this.bombCd <= 0 && this.bombs > 0) {
       this.bombCd = BOMB_COOLDOWN;
       this.bombs -= 1;
@@ -675,6 +731,17 @@ export class GameScene extends Phaser.Scene {
       }
       this.syncHud();
       this.trySpawnCrate();
+    }
+    if (
+      actions.special &&
+      this.specialCd <= 0 &&
+      this.special > 0 &&
+      this.loadout.special
+    ) {
+      this.specialCd = SPECIAL_COOLDOWN;
+      this.special -= 1;
+      this.fireSpecial();
+      this.syncHud();
     }
   }
 
@@ -765,6 +832,129 @@ export class GameScene extends Phaser.Scene {
       const vy = Phaser.Math.Clamp((best.y - b.y) * pull, -240, 240);
       b.setVelocity(BULLET_SPEED, vy);
     }
+  }
+
+  private liveFlare() {
+    for (const child of this.flareGroup.getChildren()) {
+      if ((child as Flare).active) return true;
+    }
+    return false;
+  }
+
+  private nearestFlare(x: number, y: number): Flare | null {
+    let best: Flare | null = null;
+    let bestD = 9999;
+    for (const child of this.flareGroup.getChildren()) {
+      const flare = child as Flare;
+      if (!flare.active) continue;
+      const d = Phaser.Math.Distance.Between(x, y, flare.x, flare.y);
+      if (d < bestD) {
+        bestD = d;
+        best = flare;
+      }
+    }
+    return best;
+  }
+
+  private steerDecoys() {
+    if (!this.liveFlare()) return;
+    for (const child of this.eBullets.getChildren()) {
+      const b = child as Bullet;
+      if (!b.active || b.fromPlayer) continue;
+      const bait = this.nearestFlare(b.x, b.y);
+      if (!bait) continue;
+      const dx = bait.x - b.x;
+      const dy = bait.y - b.y;
+      const mag = Math.hypot(dx, dy) || 1;
+      const body = b.body as Phaser.Physics.Arcade.Body | null;
+      const spd = Math.max(420, Math.hypot(body?.velocity.x ?? 0, body?.velocity.y ?? 0));
+      b.setVelocity((dx / mag) * spd, (dy / mag) * spd);
+    }
+  }
+
+  private flaresFall() {
+    if (!this.hm) return;
+    for (const child of this.flareGroup.getChildren()) {
+      const flare = child as Flare;
+      if (!flare.active) continue;
+      const gy = this.solidFloor(this.worldX + flare.x);
+      if (flare.y >= gy - 8) flare.disableBody(true, true);
+    }
+  }
+
+  private fireSpecial() {
+    if (this.loadout.special?.id === "flares") this.fireFlares();
+    else if (this.loadout.special?.id === "missile") this.fireMissile();
+  }
+
+  private fireFlares() {
+    const noseX = this.player.x + this.loadout.muzzle;
+    const noseY = this.player.y + 8;
+    audio.spark();
+    for (let i = 0; i < FLARE_COUNT; i += 1) {
+      const flare = this.flareGroup.get(noseX, noseY) as Flare | null;
+      if (!flare) continue;
+      const vx = 240 + i * 36 + Math.random() * 40;
+      const vy = -90 + i * 22 + Math.random() * 24;
+      flare.pop(noseX + i * 6, noseY - 4 + i * 3, vx, vy);
+    }
+  }
+
+  private lockAir(x: number, y: number): EnemyFighter | null {
+    let best: EnemyFighter | null = null;
+    let bestD = 980;
+    for (const child of this.enemies.getChildren()) {
+      const en = child as EnemyFighter;
+      if (!en.active || en.x < x - 20) continue;
+      const d = Phaser.Math.Distance.Between(x, y, en.x, en.y);
+      if (d < bestD) {
+        bestD = d;
+        best = en;
+      }
+    }
+    return best;
+  }
+
+  private fireMissile() {
+    const x = this.player.x + this.loadout.muzzle;
+    const y = this.player.y + 6;
+    const missile = this.missileGroup.get(x, y) as HeatMissile | null;
+    if (!missile) return;
+    missile.fire(x, y, this.lockAir(x, y));
+    audio.bombDrop();
+  }
+
+  private lockMissiles() {
+    for (const child of this.missileGroup.getChildren()) {
+      const m = child as HeatMissile;
+      if (!m.active) continue;
+      if (m.target && m.target.active) continue;
+      m.target = this.lockAir(m.x, m.y);
+    }
+  }
+
+  private hitMissile(missile: HeatMissile, enemy: EnemyFighter) {
+    if (!missile.active || !enemy.active) return;
+    missile.target = null;
+    missile.disableBody(true, true);
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.boom();
+      if (enemy.hp > 0) return;
+    }
+    this.killEnemy(enemy, false, true);
+  }
+
+  private eatFlare(bullet: Bullet, flare: Flare) {
+    if (!bullet.active || !flare.active) return;
+    if (bullet.fromPlayer) return;
+    const x = flare.x;
+    const y = flare.y;
+    bullet.disableBody(true, true);
+    flare.disableBody(true, true);
+    this.playFx(x, y, "hit");
+    audio.spark();
   }
 
   private bombsFall() {
@@ -1083,6 +1273,7 @@ export class GameScene extends Phaser.Scene {
     for (const child of this.enemies.getChildren()) {
       const en = child as EnemyFighter;
       if (!en.active || en.kind === "trainer") continue;
+      if (this.liveFlare()) continue;
       en.fireAcc -= dt;
       if (en.fireAcc <= 0 && en.x < GAME_WIDTH - 40 && en.x > 280) {
         en.fireAcc = en.kind === "heavy" ? 1.7 : 1.35 + Math.random() * 0.5;
@@ -1115,8 +1306,9 @@ export class GameScene extends Phaser.Scene {
       const b = this.eBullets.get(truck.x - 10, muzzleY) as Bullet | null;
       if (!b) continue;
       b.fire(truck.x - 10, muzzleY, false, { fromAa: true });
-      const px = this.player?.x ?? 200;
-      const py = this.player?.y ?? 200;
+      const bait = this.nearestFlare(truck.x, muzzleY);
+      const px = bait?.x ?? this.player?.x ?? 200;
+      const py = bait?.y ?? this.player?.y ?? 200;
       const dx = px - (truck.x - 10);
       const dy = py - muzzleY;
       const mag = Math.hypot(dx, dy) || 1;
@@ -1277,15 +1469,32 @@ export class GameScene extends Phaser.Scene {
   }
 
   private syncHud() {
+    this.grantSpecial();
     useGameStore.getState().setHud({
       hull: this.hull,
       hullMax: this.loadout.hull,
       bombs: this.bombs,
       bombsMax: this.loadout.bombs,
+      special: this.special,
+      specialMax: this.loadout.special?.max ?? 0,
+      specialName: this.loadout.special?.short ?? "",
       score: this.score,
       gunHeat: this.gunHeat,
       gunHot: this.overheat > 0,
       beat: this.mission.beats[this.beat],
     });
+  }
+
+  private grantSpecial() {
+    const spec = this.loadout.special;
+    if (!spec) return;
+    const gain = this.score - this.scoreSeen;
+    this.scoreSeen = this.score;
+    if (gain <= 0) return;
+    this.specialBank += gain;
+    while (this.special < spec.max && this.specialBank >= spec.scorePer) {
+      this.specialBank -= spec.scorePer;
+      this.special += 1;
+    }
   }
 }

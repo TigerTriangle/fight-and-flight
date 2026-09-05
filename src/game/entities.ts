@@ -5,7 +5,11 @@ import {
   BULLET_SPEED,
   CRATE_FALL_SPEED,
   ENEMY_BULLET_SPEED,
+  FLARE_GRAVITY,
+  FLARE_LIFE,
   LASER_STUN_MS,
+  MISSILE_LIFE,
+  MISSILE_SPEED,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
 } from "./config";
@@ -109,6 +113,85 @@ export class LaserBolt extends Phaser.Physics.Arcade.Sprite {
     super.preUpdate(time, delta);
     if (!this.active) return;
     if (this.x > 1400 || this.x < -80 || this.y > 800 || this.y < -80) this.disableBody(true, true);
+  }
+}
+
+export class Flare extends Phaser.Physics.Arcade.Sprite {
+  life = FLARE_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "flare");
+  }
+
+  pop(x: number, y: number, vx: number, vy: number) {
+    this.life = FLARE_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(72);
+    this.setScale(0.38);
+    this.setFlipX(false);
+    this.clearTint();
+    this.setVelocity(vx, vy);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(FLARE_GRAVITY);
+    body?.setSize(72, 72).setOffset(92, 92);
+    this.play("flare-burn", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.y > 780 || this.x > 1400 || this.x < -80) this.disableBody(true, true);
+  }
+}
+
+export class HeatMissile extends Phaser.Physics.Arcade.Sprite {
+  life = MISSILE_LIFE;
+  target: Phaser.Physics.Arcade.Sprite | null = null;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "missile");
+  }
+
+  fire(x: number, y: number, target: Phaser.Physics.Arcade.Sprite | null) {
+    this.life = MISSILE_LIFE;
+    this.target = target;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(71);
+    this.setScale(0.42);
+    this.clearTint();
+    this.setRotation(0);
+    this.setVelocity(MISSILE_SPEED, 0);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(96, 40).setOffset(80, 108);
+    this.play("missile-fly", true);
+  }
+
+  home() {
+    const t = this.target;
+    if (!t || !t.active) {
+      this.setRotation(0);
+      this.setVelocity(MISSILE_SPEED, 0);
+      return;
+    }
+    const dx = t.x - this.x;
+    const dy = t.y - this.y;
+    const mag = Math.hypot(dx, dy) || 1;
+    this.setRotation(Math.atan2(dy, dx));
+    this.setVelocity((dx / mag) * MISSILE_SPEED, (dy / mag) * MISSILE_SPEED);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    this.home();
+    if (this.life <= 0 || this.x > 1400 || this.x < -80 || this.y > 800 || this.y < -80) {
+      this.target = null;
+      this.disableBody(true, true);
+    }
   }
 }
 

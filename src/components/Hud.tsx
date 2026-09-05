@@ -1,4 +1,4 @@
-import { Bomb, Pause, Zap } from "lucide-react";
+import { Bomb, Crosshair, Flame, Pause, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bridge } from "@/game/bridge";
 import { worldById } from "@/game/worlds";
@@ -9,6 +9,9 @@ export function Hud() {
   const hullMax = useGameStore((s) => s.hullMax);
   const bombs = useGameStore((s) => s.bombs);
   const bombsMax = useGameStore((s) => s.bombsMax);
+  const special = useGameStore((s) => s.special);
+  const specialMax = useGameStore((s) => s.specialMax);
+  const specialName = useGameStore((s) => s.specialName);
   const score = useGameStore((s) => s.score);
   const gunHeat = useGameStore((s) => s.gunHeat);
   const gunHot = useGameStore((s) => s.gunHot);
@@ -76,6 +79,29 @@ export function Hud() {
             })}
           </div>
         </div>
+        {specialMax > 0 ? (
+          <div className="rounded-[var(--radius-md)] border border-border bg-bg/70 px-3 py-2">
+            <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
+              {specialName || "Special"}
+            </p>
+            <div
+              className="mt-1 flex max-w-20 flex-wrap gap-1"
+              aria-label={`${special} of ${specialMax} ${specialName || "special"}`}
+            >
+              {Array.from({ length: specialMax }).map((_, i) => {
+                const Icon = specialName === "Lock" ? Crosshair : Flame;
+                return (
+                  <Icon
+                    key={i}
+                    className={`size-4 ${i < special ? "text-accent" : "text-muted/30"}`}
+                    strokeWidth={2.25}
+                    aria-hidden
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
         <Button
           data-ui
           variant="secondary"

@@ -156,6 +156,14 @@ export function HangarScreen() {
             <StatPips label="Armor" value={plane.bars.armor} suffix={String(plane.hull)} />
             <StatPips label="Guns" value={plane.bars.guns} />
             <StatPips label="Bombs" value={plane.bars.bombs} suffix={String(plane.bombs)} />
+            {plane.special ? (
+              <p className="pt-1 text-xs uppercase tracking-[0.14em] text-accent">
+                Special · {plane.special.name}
+                <span className="ml-2 font-sans font-normal normal-case tracking-normal text-muted">
+                  E / {plane.special.short} · {plane.special.start}/{plane.special.max} · +1 per {plane.special.scorePer} pts
+                </span>
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

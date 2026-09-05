@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { input } from "@/game/input";
 import { bridge } from "@/game/bridge";
+import { planeById } from "@/game/planes";
 import { useGameStore } from "@/game/store";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ export function TouchControls() {
   const gunHeat = useGameStore((s) => s.gunHeat);
   const gunHot = useGameStore((s) => s.gunHot);
   const autoFire = useGameStore((s) => s.autoFire);
+  const planeId = useGameStore((s) => s.planeId);
+  const special = planeById(planeId).special;
   const pid = useRef<number | null>(null);
 
   useEffect(() => {
@@ -121,6 +124,20 @@ export function TouchControls() {
           />
           <span className="relative">{gunHot ? "HOT" : autoFire ? "AUTO" : "Gun"}</span>
         </button>
+        {special ? (
+          <button
+            type="button"
+            aria-label={special.name}
+            className="size-[4.5rem] rounded-full border border-accent/70 bg-bg/70 font-display text-lg tracking-wide text-fg active:scale-95"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              input.touchMode = true;
+              input.queueSpecial();
+            }}
+          >
+            {special.short}
+          </button>
+        ) : null}
       </div>
       <button
         type="button"

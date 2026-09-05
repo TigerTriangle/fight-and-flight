@@ -3,6 +3,7 @@ export type Actions = {
   moveY: number;
   fire: boolean;
   bomb: boolean;
+  special: boolean;
   pause: boolean;
 };
 
@@ -19,6 +20,7 @@ const GAME_CODES = new Set([
   "ShiftLeft",
   "ShiftRight",
   "KeyF",
+  "KeyE",
   "Escape",
 ]);
 
@@ -37,8 +39,10 @@ export class InputManager {
   stick = { x: 0, y: 0 };
   touchFire = false;
   touchBombQueued = false;
+  touchSpecialQueued = false;
   touchMode = false;
   private bombHeld = false;
+  private specialHeld = false;
   private pauseHeld = false;
   private bombEdge = false;
   private pauseEdge = false;
@@ -78,6 +82,11 @@ export class InputManager {
     this.touchBombQueued = true;
   }
 
+  queueSpecial() {
+    this.touchMode = true;
+    this.touchSpecialQueued = true;
+  }
+
   sample(): Actions {
     const left =
       this.has("KeyA") || this.has("ArrowLeft") || this.stick.x < -0.12;
@@ -111,15 +120,19 @@ export class InputManager {
       this.has("ShiftRight") ||
       this.has("KeyF") ||
       this.mouseBomb;
+    const specialHold = this.has("KeyE");
     const bomb = (!this.bombHeld && bombHold) || this.touchBombQueued;
+    const special = (!this.specialHeld && specialHold) || this.touchSpecialQueued;
     const pause = !this.pauseHeld && this.has("Escape");
     this.bombHeld = bombHold;
+    this.specialHeld = specialHold;
     this.pauseHeld = this.has("Escape");
     this.touchBombQueued = false;
+    this.touchSpecialQueued = false;
     this.bombEdge = bomb;
     this.pauseEdge = pause;
 
-    return { moveX, moveY, fire: fireHold, bomb, pause };
+    return { moveX, moveY, fire: fireHold, bomb, special, pause };
   }
 
   private has(code: string) {

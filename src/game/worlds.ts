@@ -18,6 +18,8 @@ export type WorldDef = {
   open: boolean;
   placeholder: boolean;
   briefing: string;
+  slogan: string;
+  poster: string;
 };
 
 export type DecorProp = { key: string; scale: number; plant: number; depth?: number; parallax?: number };
@@ -80,6 +82,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Barn roofs and county roads, then the guns. Cut the fighters first, then the trucks on the ground. Bring the paint home.",
+    slogan: "Courageous pilots defend the heartland!",
+    poster: "poster-heartland",
   },
   {
     id: "tidefront",
@@ -90,6 +94,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Bright water and cliff walls. Sink the patrol boats and the bigger hulls — bombs earn their keep here. Air stays thin except the fighter sweeps. Clip those sweeps if you want your racks refilled.",
+    slogan: "Hold the shoreline — the sea is our wall!",
+    poster: "poster-tidefront",
   },
   {
     id: "canyon",
@@ -100,6 +106,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Slot canyon. Mesas pinch the sky. Fly the gap, gun the interceptors in the slot, and bomb the ledge guns on the rim. Do not kiss the rock.",
+    slogan: "Our pilots are\nrock solid.\nJoin the fight!",
+    poster: "poster-canyon",
   },
   {
     id: "peaks",
@@ -110,6 +118,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Thin air over the snow line. Interceptors come in fast. Snowcats and flak hold the valley. Break the ridge bomber at the end — do not waste the burst.",
+    slogan: "The sky is the limit? No, the sky is freedom!",
+    poster: "poster-peaks",
   },
   {
     id: "canopy",
@@ -120,6 +130,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Jungle river. They wait in the brush and pop from the trees. Clip the kites to keep bombs on the sampans. Break the Howler at the end.",
+    slogan: "They hide. We hunt.\nJoin the fight today!",
+    poster: "poster-canopy",
   },
   {
     id: "underdark",
@@ -130,6 +142,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Black tunnel. The ceiling tries to kiss you. Drones own the slot; carts and drills hold the rails. Cut the Borer at the end — do not scrape the rock.",
+    slogan: "No sun.\nNo surrender.\nClear the tunnel!",
+    poster: "poster-underdark",
   },
   {
     id: "orbit",
@@ -140,6 +154,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Open vacuum. Needles in the lane, hulks on the belt. Bombs still crack the wrecks. Break the Ring at the end.",
+    slogan: "Even the void cannot hide the enemy!",
+    poster: "poster-orbit",
   },
   {
     id: "mare",
@@ -150,6 +166,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Thin dust over the mare. Hoppers float; rovers and flak hold the craters. Burst the crater line — no bombs here. Break the Walker at the end.",
+    slogan: "With cutting edge lasers, victory is certain!",
+    poster: "poster-mare",
   },
   {
     id: "vermillion",
@@ -160,6 +178,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Alien mesas and spore stacks. Moths in the lane, crawlers on the rust. Burst the turrets — no bombs here. Clip the wings for racks. Break the Bloom at the end.",
+    slogan: "Strange world. Same fight. Finish the job!",
+    poster: "poster-vermillion",
   },
   {
     id: "lumenfall",
@@ -170,6 +190,8 @@ export const WORLDS: WorldDef[] = [
     placeholder: false,
     briefing:
       "Floating isles and lantern light. Wyverns in the lane, golems on the stone. Burst the spires — no bombs here. Clip the wings for racks. Break the Lumen at the end.",
+    slogan: "Buy war bonds\nso we\ncan slay dragons!",
+    poster: "poster-lumenfall",
   },
 ];
 

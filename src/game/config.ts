@@ -36,7 +36,13 @@ export const AIR_KILLS_PER_CRATE = 4;
 export const CRATE_FALL_SPEED = 76;
 export const LASER_SPEED = 1400;
 export const LASER_STUN_MS = 1000;
+export const SPECIAL_COOLDOWN = 0.75;
+export const FLARE_GRAVITY = 640;
+export const FLARE_LIFE = 1.65;
+export const FLARE_COUNT = 4;
+export const MISSILE_SPEED = 620;
+export const MISSILE_LIFE = 2.4;
 
-export const ART_REV = 55;
+export const ART_REV = 65;
 export const HIGH_SCORE_KEY = "fnf-highscore-v1";
 export const CLEARED_KEY = "fnf-cleared-v1";
