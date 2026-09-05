@@ -22,6 +22,11 @@ import {
   SCROLL_SPEED,
   SPECIAL_COOLDOWN,
   FLARE_COUNT,
+  CARPET_SHOTS,
+  CARPET_GAP,
+  CARPET_BURST,
+  CARPET_ANGLE,
+  CLOAK_TIME,
 } from "../config";
 import {
   SCORE_AA_BOMB,
@@ -46,6 +51,7 @@ import {
 import {
   Bomb,
   Bullet,
+  CarpetLine,
   CrateDrop,
   EnemyFighter,
   Flare,
@@ -117,6 +123,12 @@ function asFlare(obj: unknown): Flare | null {
   return null;
 }
 
+function asCarpet(obj: unknown): CarpetLine | null {
+  const s = asSprite(obj);
+  if (s && "strafe" in s) return s as CarpetLine;
+  return null;
+}
+
 function asTruck(obj: unknown): Truck | null {
   const s = asSprite(obj);
   if (s && "ground" in s) return s as Truck;
@@ -133,6 +145,7 @@ export class GameScene extends Phaser.Scene {
   private specialBank = 0;
   private scoreSeen = 0;
   private specialCd = 0;
+  private cloakT = 0;
   private score = 0;
   private dead = false;
   private gunCd = 0;
@@ -182,6 +195,7 @@ export class GameScene extends Phaser.Scene {
   private laserGroup!: Phaser.Physics.Arcade.Group;
   private flareGroup!: Phaser.Physics.Arcade.Group;
   private missileGroup!: Phaser.Physics.Arcade.Group;
+  private carpetGroup!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private trucks!: Phaser.Physics.Arcade.Group;
   private crates!: Phaser.Physics.Arcade.Group;
@@ -203,6 +217,7 @@ export class GameScene extends Phaser.Scene {
     this.specialBank = 0;
     this.scoreSeen = 0;
     this.specialCd = 0;
+    this.cloakT = 0;
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
@@ -292,6 +307,11 @@ export class GameScene extends Phaser.Scene {
       maxSize: 6,
       runChildUpdate: true,
     });
+    this.carpetGroup = this.physics.add.group({
+      classType: CarpetLine,
+      maxSize: 16,
+      runChildUpdate: true,
+    });
     this.enemies = this.physics.add.group({
       classType: EnemyFighter,
       maxSize: 24,
@@ -335,18 +355,30 @@ export class GameScene extends Phaser.Scene {
       const enemy = asEnemy(a) ?? asEnemy(b);
       if (missile && enemy) this.hitMissile(missile, enemy);
     });
+    this.physics.add.overlap(this.carpetGroup, this.enemies, (a, b) => {
+      const line = asCarpet(a) ?? asCarpet(b);
+      const enemy = asEnemy(a) ?? asEnemy(b);
+      if (line && enemy) this.hitCarpetAir(line, enemy);
+    });
+    this.physics.add.overlap(this.carpetGroup, this.trucks, (a, b) => {
+      const line = asCarpet(a) ?? asCarpet(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (line && truck) this.hitCarpetGround(line, truck);
+    });
     this.physics.add.overlap(this.eBullets, this.flareGroup, (a, b) => {
       const bullet = asBullet(a) ?? asBullet(b);
       const flare = asFlare(a) ?? asFlare(b);
       if (bullet && flare) this.eatFlare(bullet, flare);
     });
     this.physics.add.overlap(this.eBullets, this.player, (a) => {
+      if (this.cloaked()) return;
       const bullet = asBullet(a);
       const cause: EndCause = bullet?.fromAa ? "aa" : "air";
       bullet?.disableBody(true, true);
       this.hurt(cause);
     });
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
+      if (this.cloaked()) return;
       const enemy = asEnemy(e);
       if (enemy) this.ramAir(enemy);
     });
@@ -360,7 +392,9 @@ export class GameScene extends Phaser.Scene {
       const truck = asTruck(a) ?? asTruck(b);
       if (bolt && truck) this.hitLaser(bolt, truck);
     });
-    this.physics.add.overlap(this.player, this.trucks, () => this.hurt("obstacle"));
+    this.physics.add.overlap(this.player, this.trucks, () => {
+      if (!this.cloaked()) this.hurt("obstacle");
+    });
     this.physics.add.overlap(this.player, this.crates, (a, b) => {
       const crate = asCrate(a) ?? asCrate(b);
       if (crate) this.snagCrate(crate);
@@ -461,6 +495,7 @@ export class GameScene extends Phaser.Scene {
       this.steerDecoys();
       this.lockMissiles();
       this.flaresFall();
+      this.carpetsFall();
       this.enemyGuns(dt);
       this.groundGuns(dt);
       this.terrainKill();
@@ -506,6 +541,7 @@ export class GameScene extends Phaser.Scene {
       this.laserGroup,
       this.flareGroup,
       this.missileGroup,
+      this.carpetGroup,
       this.enemies,
       this.trucks,
       this.crates,
@@ -533,6 +569,7 @@ export class GameScene extends Phaser.Scene {
     this.specialBank = 0;
     this.scoreSeen = 0;
     this.specialCd = 0;
+    this.cloakT = 0;
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
@@ -699,7 +736,10 @@ export class GameScene extends Phaser.Scene {
     this.player.setPosition(x, y);
     this.poseCraft(Math.hypot(actions.moveX, actions.moveY) > 0.12, dt);
 
-    if (this.overheat > 0) {
+    if (this.cloaked()) {
+      this.player.setTint(0xb7e7ff);
+      this.player.setAlpha(0.2 + Math.abs(Math.sin(this.time.now / 110)) * 0.12);
+    } else if (this.overheat > 0) {
       this.player.setTint(0xff6a4a);
     } else if (this.gunHeat > 0.7) {
       this.player.setTint(0xffb080);
@@ -707,7 +747,7 @@ export class GameScene extends Phaser.Scene {
       this.player.clearTint();
     }
 
-    if (this.invuln > 0) {
+    if (this.invuln > 0 && !this.cloaked()) {
       this.invuln -= dt;
       this.player.setAlpha(Math.sin(this.invuln * 22) > 0 ? 0.35 : 1);
       if (this.invuln <= 0) this.player.setAlpha(1);
@@ -715,6 +755,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private combat(actions: ReturnType<typeof input.sample>, dt: number) {
+    this.tickCloak(dt);
     this.tickGun(actions.fire, dt);
     this.bombCd = Math.max(0, this.bombCd - dt);
     this.specialCd = Math.max(0, this.specialCd - dt);
@@ -746,6 +787,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private tickGun(firing: boolean, dt: number) {
+    if (this.cloaked()) {
+      this.gunCd = Math.max(0, this.gunCd - dt);
+      this.gunHeat = Math.max(0, this.gunHeat - GUN_COOL_RATE * dt);
+      this.syncHud();
+      return;
+    }
     if (this.overheat > 0) {
       this.overheat = Math.max(0, this.overheat - dt);
       this.gunHeat = this.overheat / GUN_OVERHEAT_LOCK;
@@ -885,6 +932,8 @@ export class GameScene extends Phaser.Scene {
   private fireSpecial() {
     if (this.loadout.special?.id === "flares") this.fireFlares();
     else if (this.loadout.special?.id === "missile") this.fireMissile();
+    else if (this.loadout.special?.id === "carpet") this.fireCarpet();
+    else if (this.loadout.special?.id === "cloak") this.startCloak();
   }
 
   private fireFlares() {
@@ -922,6 +971,83 @@ export class GameScene extends Phaser.Scene {
     if (!missile) return;
     missile.fire(x, y, this.lockAir(x, y));
     audio.bombDrop();
+  }
+
+  private fireCarpet() {
+    this.trauma = Math.min(1, this.trauma + 0.18);
+    for (let i = 0; i < CARPET_SHOTS; i += 1) {
+      this.time.delayedCall(i * CARPET_GAP * 1000, () => this.carpetShot());
+    }
+  }
+
+  private carpetShot() {
+    if (this.dead || this.mode !== "play" || !this.player?.active) return;
+    audio.spark();
+    const ang = Phaser.Math.DegToRad(CARPET_ANGLE);
+    for (let n = 0; n < CARPET_BURST; n += 1) {
+      const along = n * 14;
+      const x = this.player.x + 34 + Math.cos(ang) * along;
+      const y = this.player.y + 16 + Math.sin(ang) * along;
+      const shot = this.carpetGroup.get(x, y) as CarpetLine | null;
+      if (!shot) continue;
+      shot.paint(x, y);
+    }
+  }
+
+  private carpetsFall() {
+    if (!this.hm) return;
+    for (const child of this.carpetGroup.getChildren()) {
+      const shot = child as CarpetLine;
+      if (!shot.active) continue;
+      const gy = this.solidFloor(this.worldX + shot.x);
+      if (shot.y >= gy - 10) {
+        this.playFx(shot.x, gy - 8, "hit");
+        shot.disableBody(true, true);
+      }
+    }
+  }
+
+  private hitCarpetAir(_line: CarpetLine, enemy: EnemyFighter) {
+    if (!enemy.active) return;
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.boom();
+      if (enemy.hp > 0) return;
+    }
+    this.killEnemy(enemy, false, true);
+  }
+
+  private hitCarpetGround(_line: CarpetLine, truck: Truck) {
+    if (!truck.active) return;
+    this.killTruck(truck);
+  }
+
+  private cloaked() {
+    return this.cloakT > 0;
+  }
+
+  private tickCloak(dt: number) {
+    if (this.cloakT <= 0) return;
+    this.cloakT = Math.max(0, this.cloakT - dt);
+    if (this.cloakT <= 0) {
+      this.player.clearTint();
+      if (this.invuln <= 0) this.player.setAlpha(1);
+    }
+  }
+
+  private startCloak() {
+    this.cloakT = CLOAK_TIME;
+    audio.pickup();
+    this.dropLocks();
+  }
+
+  private dropLocks() {
+    for (const child of this.missileGroup.getChildren()) {
+      const m = child as HeatMissile;
+      if (!m.active) continue;
+      m.target = null;
+    }
   }
 
   private lockMissiles() {
@@ -1301,6 +1427,10 @@ export class GameScene extends Phaser.Scene {
       if (!truck.active || truck.kind !== "aa" || truck.isStunned()) continue;
       truck.fireAcc -= dt;
       if (truck.fireAcc > 0 || truck.x > GAME_WIDTH - 30 || truck.x < 160) continue;
+      if (this.cloaked() && !this.liveFlare()) {
+        truck.fireAcc = 1.55;
+        continue;
+      }
       truck.fireAcc = 1.55;
       const muzzleY = truck.y - 128;
       const b = this.eBullets.get(truck.x - 10, muzzleY) as Bullet | null;
@@ -1396,6 +1526,7 @@ export class GameScene extends Phaser.Scene {
 
   private hurt(cause: EndCause = "air") {
     if (this.dead || this.invuln > 0 || this.mode !== "play") return;
+    if (this.cloaked() && cause !== "ground") return;
     this.lastHit = cause;
     this.hull -= 1;
     this.invuln = INVULN_TIME;

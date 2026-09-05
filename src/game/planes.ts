@@ -7,7 +7,7 @@ export type PlaneId =
   | "wisp";
 
 export type PlaneSpecial = {
-  id: "flares" | "missile";
+  id: "flares" | "missile" | "carpet" | "cloak";
   name: string;
   short: string;
   max: number;
@@ -127,6 +127,7 @@ export const PLANES: PlaneDef[] = [
     trim: 0.11,
     portrait: "/hangar/thunderhog.png",
     bars: { speed: 1, armor: 5, guns: 4, bombs: 5 },
+    special: { id: "carpet", name: "Carpet Line", short: "Line", max: 2, start: 1, scorePer: 1400 },
   },
   {
     id: "ghost",
@@ -154,6 +155,7 @@ export const PLANES: PlaneDef[] = [
     trim: 0.11,
     portrait: "/hangar/ghost.png",
     bars: { speed: 4, armor: 1, guns: 4, bombs: 3 },
+    special: { id: "cloak", name: "Brief Cloak", short: "Cloak", max: 2, start: 1, scorePer: 1200 },
   },
   {
     id: "leviathan",

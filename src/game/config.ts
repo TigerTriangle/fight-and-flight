@@ -42,7 +42,14 @@ export const FLARE_LIFE = 1.65;
 export const FLARE_COUNT = 4;
 export const MISSILE_SPEED = 620;
 export const MISSILE_LIFE = 2.4;
+export const CARPET_LIFE = 0.7;
+export const CARPET_SHOTS = 4;
+export const CARPET_BURST = 3;
+export const CARPET_GAP = 0.22;
+export const CARPET_SPEED = 840;
+export const CARPET_ANGLE = 60;
+export const CLOAK_TIME = 1.8;
 
-export const ART_REV = 65;
+export const ART_REV = 66;
 export const HIGH_SCORE_KEY = "fnf-highscore-v1";
 export const CLEARED_KEY = "fnf-cleared-v1";

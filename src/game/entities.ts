@@ -3,6 +3,9 @@ import {
   BLAST_RADIUS,
   BOMB_GRAVITY,
   BULLET_SPEED,
+  CARPET_LIFE,
+  CARPET_SPEED,
+  CARPET_ANGLE,
   CRATE_FALL_SPEED,
   ENEMY_BULLET_SPEED,
   FLARE_GRAVITY,
@@ -192,6 +195,41 @@ export class HeatMissile extends Phaser.Physics.Arcade.Sprite {
       this.target = null;
       this.disableBody(true, true);
     }
+  }
+}
+
+export class CarpetLine extends Phaser.Physics.Arcade.Sprite {
+  life = CARPET_LIFE;
+  strafe = true;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "bullet");
+  }
+
+  paint(x: number, y: number) {
+    this.life = CARPET_LIFE;
+    this.strafe = true;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(69);
+    this.setAlpha(1);
+    if (this.texture.key !== "bullet") this.setTexture("bullet");
+    this.setTint(0xffd080);
+    const ang = Phaser.Math.DegToRad(CARPET_ANGLE);
+    this.setRotation(ang);
+    this.setScale(0.42);
+    this.setFlipX(false);
+    this.setVelocity(Math.cos(ang) * CARPET_SPEED, Math.sin(ang) * CARPET_SPEED);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(72, 28).setOffset(28, 50);
+    this.play("bullet-fly", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.x > 1400 || this.y > 800) this.disableBody(true, true);
   }
 }
 

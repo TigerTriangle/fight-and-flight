@@ -1,4 +1,4 @@
-import { Bomb, Crosshair, Flame, Pause, Zap } from "lucide-react";
+import { Bomb, ChevronsDown, Crosshair, EyeOff, Flame, Pause, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bridge } from "@/game/bridge";
 import { worldById } from "@/game/worlds";
@@ -89,7 +89,14 @@ export function Hud() {
               aria-label={`${special} of ${specialMax} ${specialName || "special"}`}
             >
               {Array.from({ length: specialMax }).map((_, i) => {
-                const Icon = specialName === "Lock" ? Crosshair : Flame;
+                const Icon =
+                  specialName === "Lock"
+                    ? Crosshair
+                    : specialName === "Line"
+                      ? ChevronsDown
+                      : specialName === "Cloak"
+                        ? EyeOff
+                        : Flame;
                 return (
                   <Icon
                     key={i}

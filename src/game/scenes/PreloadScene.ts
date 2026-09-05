@@ -66,6 +66,10 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("carpet", `/game/carpet.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("crate", `/game/crate.png${v}`, {
       frameWidth: 192,
       frameHeight: 192,
@@ -381,6 +385,12 @@ export class PreloadScene extends Phaser.Scene {
       key: "missile-fly",
       frames: this.anims.generateFrameNumbers("missile", { start: 0, end: 3 }),
       frameRate: 18,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "carpet-burn",
+      frames: this.anims.generateFrameNumbers("carpet", { start: 0, end: 3 }),
+      frameRate: 20,
       repeat: -1,
     });
     this.anims.create({
