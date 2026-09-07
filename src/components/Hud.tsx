@@ -1,4 +1,4 @@
-import { Bomb, ChevronsDown, CircleDot, Crosshair, EyeOff, Flame, Pause, Waves } from "lucide-react";
+import { Bomb, ChevronsDown, CircleDot, Crosshair, EyeOff, Flag, Flame, Pause, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bridge } from "@/game/bridge";
 import { worldById } from "@/game/worlds";
@@ -12,6 +12,9 @@ export function Hud() {
   const special = useGameStore((s) => s.special);
   const specialMax = useGameStore((s) => s.specialMax);
   const specialName = useGameStore((s) => s.specialName);
+  const pickup = useGameStore((s) => s.pickup);
+  const pickupMax = useGameStore((s) => s.pickupMax);
+  const pickupName = useGameStore((s) => s.pickupName);
   const score = useGameStore((s) => s.score);
   const gunHeat = useGameStore((s) => s.gunHeat);
   const gunHot = useGameStore((s) => s.gunHot);
@@ -106,6 +109,26 @@ export function Hud() {
                   />
                 );
               })}
+            </div>
+          </div>
+        ) : null}
+        {pickupMax > 0 ? (
+          <div className="rounded-[var(--radius-md)] border border-border bg-bg/70 px-3 py-2">
+            <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
+              {pickupName || "Call"}
+            </p>
+            <div
+              className="mt-1 flex max-w-20 flex-wrap gap-1"
+              aria-label={`${pickup} of ${pickupMax} ${pickupName || "call"}`}
+            >
+              {Array.from({ length: pickupMax }).map((_, i) => (
+                <Flag
+                  key={i}
+                  className={`size-4 ${i < pickup ? "text-accent" : "text-muted/30"}`}
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+              ))}
             </div>
           </div>
         ) : null}

@@ -16,6 +16,9 @@ export function TouchControls() {
   const autoFire = useGameStore((s) => s.autoFire);
   const planeId = useGameStore((s) => s.planeId);
   const special = planeById(planeId).special;
+  const pickup = useGameStore((s) => s.pickup);
+  const pickupMax = useGameStore((s) => s.pickupMax);
+  const pickupName = useGameStore((s) => s.pickupName);
   const pid = useRef<number | null>(null);
 
   useEffect(() => {
@@ -78,19 +81,42 @@ export function TouchControls() {
           }}
         />
       </div>
-      <div className="pointer-events-auto absolute bottom-[max(1.4rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col-reverse items-center gap-3">
-        <button
-          type="button"
-          aria-label="Drop bomb"
-          className="size-[4.5rem] rounded-full border border-border bg-bg/70 font-display text-lg tracking-wide text-fg active:scale-95"
-          onPointerDown={(e) => {
-            e.preventDefault();
-            input.touchMode = true;
-            input.queueBomb();
-          }}
-        >
-          Bomb
-        </button>
+      <div className="pointer-events-auto absolute bottom-[max(1.4rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] flex flex-col-reverse items-end gap-3">
+        <div className="flex items-end gap-3">
+          {pickupMax > 0 ? (
+            <button
+              type="button"
+              aria-label={pickupName || "Call"}
+              disabled={pickup <= 0}
+              className={cn(
+                "size-16 rounded-full border font-display text-base tracking-wide active:scale-95",
+                pickup > 0
+                  ? "border-accent/70 bg-bg/70 text-fg"
+                  : "border-border/60 bg-bg/40 text-muted",
+              )}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                if (pickup <= 0) return;
+                input.touchMode = true;
+                input.queueCall();
+              }}
+            >
+              {pickupName || "Call"}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            aria-label="Drop bomb"
+            className="size-[4.5rem] rounded-full border border-border bg-bg/70 font-display text-lg tracking-wide text-fg active:scale-95"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              input.touchMode = true;
+              input.queueBomb();
+            }}
+          >
+            Bomb
+          </button>
+        </div>
         <button
           type="button"
           aria-label={gunHot ? "Guns overheated" : "Fire guns"}

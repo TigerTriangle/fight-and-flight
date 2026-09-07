@@ -56,6 +56,7 @@ export type StageKit = {
   grav?: number;
   float?: number;
   secondary?: "bomb" | "laser";
+  pickup?: "ally" | "torpedo";
   airProj?: "bullet" | "fireball";
   groundSink?: number;
   bankSink?: number;
@@ -234,6 +235,7 @@ const HEARTLAND_KIT: StageKit = {
   startY: 260,
   airMin: 110,
   airMax: 360,
+  pickup: "ally",
 };
 
 const TIDE_KIT: StageKit = {
@@ -265,6 +267,7 @@ const TIDE_KIT: StageKit = {
   startY: 250,
   airMin: 110,
   airMax: 360,
+  pickup: "torpedo",
 };
 
 const CANYON_KIT: StageKit = {

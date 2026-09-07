@@ -7,6 +7,9 @@ import {
   CARPET_SPEED,
   CARPET_ANGLE,
   CRATE_FALL_SPEED,
+  ALLY_SPEED,
+  TORPEDO_LIFE,
+  TORPEDO_SPEED,
   ENEMY_BULLET_SPEED,
   FLARE_GRAVITY,
   FLARE_LIFE,
@@ -583,7 +586,7 @@ export class Truck extends Phaser.Physics.Arcade.Sprite {
 
 export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
   supply = true;
-  kind: "bomb" = "bomb";
+  kind: "bomb" | "ally" = "bomb";
   sway = 0;
   fall = CRATE_FALL_SPEED;
   private badge: Phaser.GameObjects.Sprite | null = null;
@@ -594,9 +597,9 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     this.once("destroy", () => this.clearMarks());
   }
 
-  drop(x: number, y: number, fall = CRATE_FALL_SPEED, label = "BOMB") {
+  drop(x: number, y: number, fall = CRATE_FALL_SPEED, label = "BOMB", kind: "bomb" | "ally" = "bomb") {
     this.supply = true;
-    this.kind = "bomb";
+    this.kind = kind;
     this.sway = Math.random() * Math.PI * 2;
     this.fall = fall;
     this.enableBody(true, x, y, true, true);
@@ -629,15 +632,19 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
   }
 
   private showMarks(label = "BOMB") {
+    const ally = label === "CALL";
+    const torp = label === "TORP";
     const laser = label === "BURST";
+    const badgeKey = ally ? "ally-tank" : torp ? "torpedo" : laser ? "laser-bolt" : "bomb";
     if (!this.badge) {
-      this.badge = this.scene.add.sprite(this.x, this.y, laser ? "laser-bolt" : "bomb", 0);
+      this.badge = this.scene.add.sprite(this.x, this.y, badgeKey, 0);
       this.badge.setDepth(59);
     }
-    this.badge.setTexture(laser ? "laser-bolt" : "bomb");
-    this.badge.setScale(laser ? 0.55 : 0.34);
+    this.badge.setTexture(badgeKey);
+    this.badge.setScale(ally ? 0.28 : torp ? 0.4 : laser ? 0.55 : 0.34);
     this.badge.setVisible(true);
-    if (!laser) this.badge.play("bomb-spin", true);
+    if (torp) this.badge.play("torpedo-run", true);
+    else if (!laser && !ally) this.badge.play("bomb-spin", true);
     else this.badge.anims.stop();
     if (!this.tag) {
       this.tag = this.scene.add
@@ -671,6 +678,77 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     this.tag?.destroy();
     this.badge = null;
     this.tag = null;
+  }
+}
+
+export class AllyTank extends Phaser.Physics.Arcade.Sprite {
+  fireAcc = 0.1;
+  ally = true;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "ally-tank");
+  }
+
+  roll(x: number, y: number) {
+    this.fireAcc = 0.08;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(44);
+    this.clearTint();
+    this.setOrigin(0.5, 1);
+    this.setScale(0.84);
+    this.setVelocity(-ALLY_SPEED, 0);
+    this.play("ally-tank-idle", true);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(176, 108).setOffset(40, 140);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    if (this.x < -220) this.disableBody(true, true);
+  }
+}
+
+export class Torpedo extends Phaser.Physics.Arcade.Sprite {
+  life = TORPEDO_LIFE;
+  wet = false;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "torpedo");
+  }
+
+  drop(x: number, y: number, grav = 1) {
+    this.life = TORPEDO_LIFE;
+    this.wet = false;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(46);
+    this.clearTint();
+    this.setOrigin(0.5, 0.5);
+    this.setScale(0.52);
+    this.setRotation(0.55);
+    this.setVelocity(90, 140 * grav);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * grav);
+    body?.setSize(160, 48).setOffset(48, 104);
+    this.play("torpedo-run", true);
+  }
+
+  swim() {
+    this.wet = true;
+    this.setRotation(0);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setGravityY(0);
+    this.setVelocity(TORPEDO_SPEED, 0);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.x > 1420 || this.y > 820) this.disableBody(true, true);
   }
 }
 

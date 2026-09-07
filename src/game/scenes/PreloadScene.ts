@@ -41,6 +41,14 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("ally-tank", `/game/ally-tank.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("torpedo", `/game/torpedo.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("radar", `/game/radar.png${v}`, {
       frameWidth: 256,
       frameHeight: 256,
@@ -363,6 +371,18 @@ export class PreloadScene extends Phaser.Scene {
       key: "aa-idle",
       frames: this.anims.generateFrameNumbers("aa", { start: 0, end: 3 }),
       frameRate: 7,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "ally-tank-idle",
+      frames: this.anims.generateFrameNumbers("ally-tank", { start: 0, end: 3 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "torpedo-run",
+      frames: this.anims.generateFrameNumbers("torpedo", { start: 0, end: 3 }),
+      frameRate: 14,
       repeat: -1,
     });
     this.anims.create({

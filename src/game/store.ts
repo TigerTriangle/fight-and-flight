@@ -25,6 +25,9 @@ type GameStore = {
   special: number;
   specialMax: number;
   specialName: string;
+  pickup: number;
+  pickupMax: number;
+  pickupName: string;
   score: number;
   gunHeat: number;
   gunHot: boolean;
@@ -55,6 +58,9 @@ type GameStore = {
     special?: number;
     specialMax?: number;
     specialName?: string;
+    pickup?: number;
+    pickupMax?: number;
+    pickupName?: string;
     score?: number;
     gunHeat?: number;
     gunHot?: boolean;
@@ -98,6 +104,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   special: planeById(DEFAULT_PLANE).special?.start ?? 0,
   specialMax: planeById(DEFAULT_PLANE).special?.max ?? 0,
   specialName: planeById(DEFAULT_PLANE).special?.short ?? "",
+  pickup: 0,
+  pickupMax: 0,
+  pickupName: "",
   score: 0,
   gunHeat: 0,
   gunHot: false,
@@ -164,6 +173,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       special: p.special?.start ?? 0,
       specialMax: p.special?.max ?? 0,
       specialName: p.special?.short ?? "",
+      pickup: 0,
+      pickupMax: 0,
+      pickupName: "",
       score: 0,
       gunHeat: 0,
       gunHot: false,

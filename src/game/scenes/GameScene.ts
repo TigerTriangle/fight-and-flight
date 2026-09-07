@@ -3,6 +3,9 @@ import { audio } from "../audio";
 import { bridge } from "../bridge";
 import {
   AIR_KILLS_PER_CRATE,
+  ALLY_FIRE,
+  ALLY_SHELL,
+  ALLY_SPEED,
   BOMB_COOLDOWN,
   BOMB_CRATE_AT,
   BOMB_PICKUP,
@@ -16,6 +19,10 @@ import {
   GUN_OVERHEAT_LOCK,
   INVULN_TIME,
   LASER_SPEED,
+  PICKUP_COOLDOWN,
+  PICKUP_EVERY,
+  PICKUP_FIRST,
+  PICKUP_MAX,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
   PLAYER_Y_MIN,
@@ -49,7 +56,9 @@ import {
   type Pack,
 } from "../mission";
 import {
+  AllyTank,
   Bomb,
+  Torpedo,
   Bullet,
   CarpetLine,
   CrateDrop,
@@ -98,6 +107,18 @@ function asBullet(obj: unknown): Bullet | null {
 function asEnemy(obj: unknown): EnemyFighter | null {
   const s = asSprite(obj);
   if (s && "fireAcc" in s) return s as EnemyFighter;
+  return null;
+}
+
+function asTorpedo(obj: unknown): Torpedo | null {
+  const s = asSprite(obj);
+  if (s && "wet" in s) return s as Torpedo;
+  return null;
+}
+
+function asAlly(obj: unknown): AllyTank | null {
+  const s = asSprite(obj);
+  if (s && "ally" in s) return s as AllyTank;
   return null;
 }
 
@@ -159,6 +180,9 @@ export class GameScene extends Phaser.Scene {
   private specialBank = 0;
   private scoreSeen = 0;
   private specialCd = 0;
+  private pickup = 0;
+  private pickupMax = 0;
+  private pickupCd = 0;
   private cloakT = 0;
   private score = 0;
   private dead = false;
@@ -194,6 +218,8 @@ export class GameScene extends Phaser.Scene {
   private scroll = SCROLL_SPEED;
   private overTimer: Phaser.Time.TimerEvent | null = null;
   private airKills = 0;
+  private pickupT = 0;
+  private pickupDrops = 0;
 
   private sky!: Phaser.GameObjects.TileSprite;
   private far!: Phaser.GameObjects.TileSprite;
@@ -215,6 +241,8 @@ export class GameScene extends Phaser.Scene {
   private enemies!: Phaser.Physics.Arcade.Group;
   private trucks!: Phaser.Physics.Arcade.Group;
   private crates!: Phaser.Physics.Arcade.Group;
+  private allies!: Phaser.Physics.Arcade.Group;
+  private torpedoes!: Phaser.Physics.Arcade.Group;
   private fx!: Phaser.Physics.Arcade.Group;
   private decor!: Phaser.GameObjects.Group;
 
@@ -233,6 +261,9 @@ export class GameScene extends Phaser.Scene {
     this.specialBank = 0;
     this.scoreSeen = 0;
     this.specialCd = 0;
+    this.pickup = 0;
+    this.pickupMax = 0;
+    this.pickupCd = 0;
     this.cloakT = 0;
     this.score = 0;
     this.dead = false;
@@ -259,6 +290,8 @@ export class GameScene extends Phaser.Scene {
     this.lastVy = 0;
     this.forced = new Set();
     this.airKills = 0;
+    this.pickupT = 0;
+    this.pickupDrops = 0;
   }
 
   create() {
@@ -350,6 +383,16 @@ export class GameScene extends Phaser.Scene {
     });
     this.crates = this.physics.add.group({
       classType: CrateDrop,
+      maxSize: 4,
+      runChildUpdate: true,
+    });
+    this.allies = this.physics.add.group({
+      classType: AllyTank,
+      maxSize: 2,
+      runChildUpdate: true,
+    });
+    this.torpedoes = this.physics.add.group({
+      classType: Torpedo,
       maxSize: 4,
       runChildUpdate: true,
     });
@@ -445,6 +488,16 @@ export class GameScene extends Phaser.Scene {
       const crate = asCrate(a) ?? asCrate(b);
       if (crate) this.snagCrate(crate);
     });
+    this.physics.add.overlap(this.allies, this.trucks, (a, b) => {
+      const ally = asAlly(a) ?? asAlly(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (ally && truck) this.hitAllyGround(ally, truck);
+    });
+    this.physics.add.overlap(this.torpedoes, this.trucks, (a, b) => {
+      const torp = asTorpedo(a) ?? asTorpedo(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (torp && truck) this.hitTorpedo(torp, truck);
+    });
 
     this.unsub = bridge.on((cmd) => this.onCmd(cmd));
     this.events.once("shutdown", () => {
@@ -537,6 +590,8 @@ export class GameScene extends Phaser.Scene {
       this.bombsFall();
       this.lasersFly();
       this.cratesFall();
+      this.alliesDrive(dt);
+      this.torpedoesRun();
       this.steerDarts();
       this.steerDecoys();
       this.lockMissiles();
@@ -595,6 +650,8 @@ export class GameScene extends Phaser.Scene {
       this.enemies,
       this.trucks,
       this.crates,
+      this.allies,
+      this.torpedoes,
       this.fx,
     ];
     for (const g of groups) {
@@ -619,6 +676,9 @@ export class GameScene extends Phaser.Scene {
     this.specialBank = 0;
     this.scoreSeen = 0;
     this.specialCd = 0;
+    this.pickup = 0;
+    this.pickupMax = 0;
+    this.pickupCd = 0;
     this.cloakT = 0;
     this.score = 0;
     this.dead = false;
@@ -646,6 +706,8 @@ export class GameScene extends Phaser.Scene {
     this.forced.clear();
     input.setKeys([]);
     this.airKills = 0;
+    this.pickupT = 0;
+    this.pickupDrops = 0;
     this.clearEntities();
     this.applyStage();
     this.beginRun();
@@ -700,6 +762,8 @@ export class GameScene extends Phaser.Scene {
     this.groundDrawH = this.kit.groundDrawH;
     this.yMin = this.kit.yMin;
     this.scroll = this.kit.scroll ?? SCROLL_SPEED;
+    this.pickupMax = this.kit.pickup ? PICKUP_MAX : 0;
+    this.pickup = 0;
     const k = this.kit;
     const ts = PLATE_SCALE;
     const plate = (s: Phaser.GameObjects.TileSprite, key: string) => {
@@ -809,6 +873,7 @@ export class GameScene extends Phaser.Scene {
     this.tickGun(actions.fire, dt);
     this.bombCd = Math.max(0, this.bombCd - dt);
     this.specialCd = Math.max(0, this.specialCd - dt);
+    this.pickupCd = Math.max(0, this.pickupCd - dt);
     if (actions.bomb && this.bombCd <= 0 && this.bombs > 0) {
       this.bombCd = BOMB_COOLDOWN;
       this.bombs -= 1;
@@ -829,6 +894,12 @@ export class GameScene extends Phaser.Scene {
       this.specialCd = SPECIAL_COOLDOWN;
       this.special -= 1;
       this.fireSpecial();
+      this.syncHud();
+    }
+    if (actions.call && this.pickupCd <= 0 && this.pickup > 0) {
+      this.pickupCd = PICKUP_COOLDOWN;
+      this.pickup -= 1;
+      this.usePickup();
       this.syncHud();
     }
   }
@@ -1301,7 +1372,7 @@ export class GameScene extends Phaser.Scene {
   private trySpawnCrate() {
     if (this.mode !== "play" || this.dead) return;
     if (this.airKills < AIR_KILLS_PER_CRATE) return;
-    if (this.crates.countActive(true) > 0) return;
+    if (this.activeCrate("bomb")) return;
     if (this.bombs >= this.loadout.bombs) return;
     if (this.loadout.bombs > 3 && this.bombs > BOMB_CRATE_AT) return;
     this.airKills = 0;
@@ -1311,22 +1382,141 @@ export class GameScene extends Phaser.Scene {
   private spawnCrate() {
     const x = Phaser.Math.Clamp(this.player.x + 48, PLAYER_X_MIN + 40, PLAYER_X_MAX - 16);
     const crate = this.crates.get(x, -36) as CrateDrop | null;
-    crate?.drop(
-      x,
-      -36,
-      CRATE_FALL_SPEED * (this.kit.grav ?? 1),
-      "BOMB",
-    );
+    crate?.drop(x, -36, CRATE_FALL_SPEED * (this.kit.grav ?? 1), "BOMB", "bomb");
+  }
+
+  private activeCrate(kind: "bomb" | "ally") {
+    for (const child of this.crates.getChildren()) {
+      const crate = child as CrateDrop;
+      if (crate.active && crate.kind === kind) return true;
+    }
+    return false;
+  }
+
+  private tickPickup(dt: number) {
+    if (!this.kit.pickup || this.mode !== "play" || this.dead) return;
+    this.pickupT += dt;
+    const wait = this.pickupDrops === 0 ? PICKUP_FIRST : PICKUP_EVERY;
+    if (this.pickupT < wait) return;
+    if (this.activeCrate("ally") || this.callBusy()) return;
+    if (this.pickup >= this.pickupMax) return;
+    this.pickupT = 0;
+    this.pickupDrops += 1;
+    this.spawnCallCrate();
+  }
+
+  private callBusy() {
+    return this.allies.countActive(true) > 0 || this.torpedoes.countActive(true) > 0;
+  }
+
+  private spawnCallCrate() {
+    const x = Phaser.Math.Clamp(this.player.x + 36, PLAYER_X_MIN + 40, PLAYER_X_MAX - 16);
+    const crate = this.crates.get(x, -36) as CrateDrop | null;
+    const label = this.kit.pickup === "torpedo" ? "TORP" : "CALL";
+    crate?.drop(x, -36, CRATE_FALL_SPEED * (this.kit.grav ?? 1), label, "ally");
+  }
+
+  private usePickup() {
+    if (this.kit.pickup === "torpedo") this.fireTorpedo();
+    else this.callAlly();
+  }
+
+  private fireTorpedo() {
+    const x = this.player.x + 18;
+    const y = this.player.y + 22;
+    const torp = this.torpedoes.get(x, y) as Torpedo | null;
+    if (!torp) return;
+    torp.drop(x, y, this.kit.grav ?? 1);
+    audio.bombDrop();
+  }
+
+  private torpedoesRun() {
+    if (!this.hm) return;
+    for (const child of this.torpedoes.getChildren()) {
+      const torp = child as Torpedo;
+      if (!torp.active) continue;
+      const gy = this.waterLine(this.worldX + torp.x) - 18;
+      if (!torp.wet) {
+        if (torp.y >= gy) {
+          torp.y = gy;
+          torp.swim();
+        }
+        continue;
+      }
+      torp.y = gy;
+      torp.setVelocityY(0);
+    }
+  }
+
+  private hitTorpedo(torp: Torpedo, truck: Truck) {
+    if (!torp.active || !truck.active || !torp.wet) return;
+    const x = truck.x;
+    const y = truck.y - 24;
+    torp.disableBody(true, true);
+    this.killTruck(truck);
+    this.playFx(x, y, "blast");
+    audio.boom();
+  }
+
+  private callAlly() {
+    if (!this.hm) return;
+    const x = GAME_WIDTH + 90;
+    const y = this.waterLine(this.worldX + x) + 28;
+    const tank = this.allies.get(x, y) as AllyTank | null;
+    tank?.roll(x, y);
+    audio.boom();
+    this.trauma = Math.min(1, this.trauma + 0.12);
+  }
+
+  private alliesDrive(dt: number) {
+    if (!this.hm) return;
+    for (const child of this.allies.getChildren()) {
+      const ally = child as AllyTank;
+      if (!ally.active) continue;
+      ally.y = this.waterLine(this.worldX + ally.x) + 28;
+      ally.setVelocity(-ALLY_SPEED, 0);
+      ally.fireAcc -= dt;
+      if (ally.fireAcc > 0) continue;
+      ally.fireAcc = ALLY_FIRE;
+      const mx = ally.x - 96;
+      const my = ally.y - 70;
+      const shot = this.bullets.get(mx, my) as Bullet | null;
+      if (shot) {
+        shot.fire(mx, my, true, { scale: 0.38, tint: 0xffe08a });
+        shot.setFlipX(true);
+        shot.setVelocity(-ALLY_SHELL, 0);
+      }
+      this.playFx(mx - 8, my, "hit");
+      audio.spark();
+      for (const tChild of this.trucks.getChildren()) {
+        const truck = tChild as Truck;
+        if (!truck.active) continue;
+        if (truck.x >= ally.x || truck.x < ally.x - 170) continue;
+        if (Math.abs(truck.y - ally.y) > 90) continue;
+        this.killTruck(truck);
+      }
+    }
+  }
+
+  private hitAllyGround(_ally: AllyTank, truck: Truck) {
+    if (!truck.active) return;
+    this.killTruck(truck);
   }
 
   private snagCrate(crate: CrateDrop) {
     if (!crate.active || this.dead) return;
+    const kind = crate.kind;
     crate.disableBody(true, true);
-    this.bombs = Math.min(this.loadout.bombs, this.bombs + BOMB_PICKUP);
     this.playFx(this.player.x + 20, this.player.y, "hit");
     this.trauma = Math.min(1, this.trauma + 0.18);
     audio.pickup();
-    this.syncHud();
+    if (kind === "ally") {
+      this.pickup = Math.min(this.pickupMax, this.pickup + 1);
+      this.syncHud();
+    } else {
+      this.bombs = Math.min(this.loadout.bombs, this.bombs + BOMB_PICKUP);
+      this.syncHud();
+    }
   }
 
   private detonate(x: number, y: number, bomb: Bomb) {
@@ -1393,6 +1583,7 @@ export class GameScene extends Phaser.Scene {
       this.spawnDecor();
     }
     this.reapDecor();
+    this.tickPickup(dt);
   }
 
   private firePack(pack: Pack) {
@@ -1761,6 +1952,9 @@ export class GameScene extends Phaser.Scene {
       special: this.special,
       specialMax: this.loadout.special?.max ?? 0,
       specialName: this.loadout.special?.short ?? "",
+      pickup: this.pickup,
+      pickupMax: this.pickupMax,
+      pickupName: this.kit.pickup ? "Call" : "",
       score: this.score,
       gunHeat: this.gunHeat,
       gunHot: this.overheat > 0,
