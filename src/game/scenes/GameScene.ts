@@ -58,6 +58,8 @@ import {
   HeatMissile,
   FxSprite,
   LaserBolt,
+  Shockwave,
+  FireBomb,
   Truck,
   circleHits,
 } from "../entities";
@@ -120,6 +122,18 @@ function asMissile(obj: unknown): HeatMissile | null {
 function asFlare(obj: unknown): Flare | null {
   const s = asSprite(obj);
   if (s && "life" in s && s.texture?.key === "flare") return s as Flare;
+  return null;
+}
+
+function asShock(obj: unknown): Shockwave | null {
+  const s = asSprite(obj);
+  if (s && s.texture?.key === "shock") return s as Shockwave;
+  return null;
+}
+
+function asRoller(obj: unknown): FireBomb | null {
+  const s = asSprite(obj);
+  if (s && "rolling" in s) return s as FireBomb;
   return null;
 }
 
@@ -196,6 +210,8 @@ export class GameScene extends Phaser.Scene {
   private flareGroup!: Phaser.Physics.Arcade.Group;
   private missileGroup!: Phaser.Physics.Arcade.Group;
   private carpetGroup!: Phaser.Physics.Arcade.Group;
+  private shockGroup!: Phaser.Physics.Arcade.Group;
+  private rollerGroup!: Phaser.Physics.Arcade.Group;
   private enemies!: Phaser.Physics.Arcade.Group;
   private trucks!: Phaser.Physics.Arcade.Group;
   private crates!: Phaser.Physics.Arcade.Group;
@@ -312,6 +328,16 @@ export class GameScene extends Phaser.Scene {
       maxSize: 16,
       runChildUpdate: true,
     });
+    this.shockGroup = this.physics.add.group({
+      classType: Shockwave,
+      maxSize: 4,
+      runChildUpdate: true,
+    });
+    this.rollerGroup = this.physics.add.group({
+      classType: FireBomb,
+      maxSize: 4,
+      runChildUpdate: true,
+    });
     this.enemies = this.physics.add.group({
       classType: EnemyFighter,
       maxSize: 24,
@@ -364,6 +390,26 @@ export class GameScene extends Phaser.Scene {
       const line = asCarpet(a) ?? asCarpet(b);
       const truck = asTruck(a) ?? asTruck(b);
       if (line && truck) this.hitCarpetGround(line, truck);
+    });
+    this.physics.add.overlap(this.shockGroup, this.enemies, (a, b) => {
+      const wave = asShock(a) ?? asShock(b);
+      const enemy = asEnemy(a) ?? asEnemy(b);
+      if (wave && enemy) this.hitShockAir(wave, enemy);
+    });
+    this.physics.add.overlap(this.shockGroup, this.trucks, (a, b) => {
+      const wave = asShock(a) ?? asShock(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (wave && truck) this.hitShockGround(wave, truck);
+    });
+    this.physics.add.overlap(this.rollerGroup, this.trucks, (a, b) => {
+      const roller = asRoller(a) ?? asRoller(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (roller && truck) this.hitRoller(roller, truck);
+    });
+    this.physics.add.overlap(this.enemies, this.trucks, (a, b) => {
+      const enemy = asEnemy(a) ?? asEnemy(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (enemy && truck) this.crushGround(enemy, truck);
     });
     this.physics.add.overlap(this.eBullets, this.flareGroup, (a, b) => {
       const bullet = asBullet(a) ?? asBullet(b);
@@ -496,6 +542,8 @@ export class GameScene extends Phaser.Scene {
       this.lockMissiles();
       this.flaresFall();
       this.carpetsFall();
+      this.planesFall();
+      this.rollersFall();
       this.enemyGuns(dt);
       this.groundGuns(dt);
       this.terrainKill();
@@ -542,6 +590,8 @@ export class GameScene extends Phaser.Scene {
       this.flareGroup,
       this.missileGroup,
       this.carpetGroup,
+      this.shockGroup,
+      this.rollerGroup,
       this.enemies,
       this.trucks,
       this.crates,
@@ -934,6 +984,8 @@ export class GameScene extends Phaser.Scene {
     else if (this.loadout.special?.id === "missile") this.fireMissile();
     else if (this.loadout.special?.id === "carpet") this.fireCarpet();
     else if (this.loadout.special?.id === "cloak") this.startCloak();
+    else if (this.loadout.special?.id === "shock") this.fireShock();
+    else if (this.loadout.special?.id === "roller") this.fireRoller();
   }
 
   private fireFlares() {
@@ -1021,6 +1073,109 @@ export class GameScene extends Phaser.Scene {
   private hitCarpetGround(_line: CarpetLine, truck: Truck) {
     if (!truck.active) return;
     this.killTruck(truck);
+  }
+
+  private fireShock() {
+    const x = this.player.x + this.loadout.muzzle + 8;
+    const y = this.player.y + 6;
+    const wave = this.shockGroup.get(x, y) as Shockwave | null;
+    if (!wave) return;
+    wave.blast(x, y);
+    audio.boom();
+    this.trauma = Math.min(1, this.trauma + 0.32);
+  }
+
+  private fireRoller() {
+    const x = this.player.x + 18;
+    const y = this.player.y + 22;
+    const bomb = this.rollerGroup.get(x, y) as FireBomb | null;
+    if (!bomb) return;
+    bomb.drop(x, y, this.kit.grav ?? 1);
+    audio.bombDrop();
+  }
+
+  private nearestTruck(x: number): Truck | null {
+    let best: Truck | null = null;
+    let bestD = 9999;
+    for (const child of this.trucks.getChildren()) {
+      const t = child as Truck;
+      if (!t.active) continue;
+      const d = Math.abs(t.x - x);
+      if (d < bestD) {
+        bestD = d;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  private rollersFall() {
+    if (!this.hm) return;
+    for (const child of this.rollerGroup.getChildren()) {
+      const bomb = child as FireBomb;
+      if (!bomb.active) continue;
+      const gy = this.solidFloor(this.worldX + bomb.x);
+      if (!bomb.rolling) {
+        if (bomb.y >= gy - 14) {
+          const prey = this.nearestTruck(bomb.x);
+          const dir = !prey || Math.abs(prey.x - bomb.x) < 8 ? 1 : Math.sign(prey.x - bomb.x) || 1;
+          bomb.startRoll(dir);
+          bomb.y = gy - 14;
+        }
+        continue;
+      }
+      bomb.y = gy - 14;
+      bomb.setVelocityY(0);
+    }
+  }
+
+  private hitRoller(bomb: FireBomb, truck: Truck) {
+    if (!bomb.active || !truck.active) return;
+    const x = truck.x;
+    const y = truck.y - 24;
+    bomb.disableBody(true, true);
+    this.killTruck(truck);
+    this.playFx(x, y, "blast");
+    audio.boom();
+  }
+
+  private hitShockAir(_wave: Shockwave, enemy: EnemyFighter) {
+    if (!enemy.active || enemy.falling) return;
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.boom();
+      if (enemy.hp > 0) return;
+      this.killEnemy(enemy, false, true);
+      return;
+    }
+    enemy.knockDown();
+    audio.spark();
+  }
+
+  private hitShockGround(_wave: Shockwave, truck: Truck) {
+    if (!truck.active) return;
+    this.killTruck(truck);
+  }
+
+  private crushGround(enemy: EnemyFighter, truck: Truck) {
+    if (!enemy.active || !truck.active || !enemy.falling) return;
+    this.killTruck(truck);
+    this.killEnemy(enemy, true, true);
+  }
+
+  private planesFall() {
+    if (!this.hm) return;
+    for (const child of this.enemies.getChildren()) {
+      const en = child as EnemyFighter;
+      if (!en.active || !en.falling) continue;
+      const gy = this.solidFloor(this.worldX + en.x);
+      if (en.y >= gy - 22) {
+        this.playFx(en.x, gy - 8, "blast");
+        audio.boom();
+        this.killEnemy(en, true, true);
+      }
+    }
   }
 
   private cloaked() {
@@ -1360,7 +1515,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.chm || !this.hm) return;
     for (const child of this.enemies.getChildren()) {
       const e = child as EnemyFighter;
-      if (!e.active) continue;
+      if (!e.active || e.falling) continue;
       const ceil = ceilingY(this.worldX + e.x, this.chm) + 40;
       const floor = groundY(this.worldX + e.x, this.hm, this.groundDrawH) - 56;
       if (e.y < ceil) e.y = ceil;
@@ -1398,7 +1553,7 @@ export class GameScene extends Phaser.Scene {
   private enemyGuns(dt: number) {
     for (const child of this.enemies.getChildren()) {
       const en = child as EnemyFighter;
-      if (!en.active || en.kind === "trainer") continue;
+      if (!en.active || en.kind === "trainer" || en.falling) continue;
       if (this.liveFlare()) continue;
       en.fireAcc -= dt;
       if (en.fireAcc <= 0 && en.x < GAME_WIDTH - 40 && en.x > 280) {
@@ -1474,7 +1629,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private ramAir(enemy: EnemyFighter) {
-    if (!enemy.active) return;
+    if (!enemy.active || enemy.falling) return;
     if (enemy.kind === "heavy") {
       enemy.hp -= 1;
       enemy.setTintFill(0xffffff);

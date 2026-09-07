@@ -49,7 +49,11 @@ export const CARPET_GAP = 0.22;
 export const CARPET_SPEED = 840;
 export const CARPET_ANGLE = 60;
 export const CLOAK_TIME = 1.8;
+export const SHOCK_LIFE = 0.72;
+export const SHOCK_SPEED = 460;
+export const ROLLER_LIFE = 4.2;
+export const ROLLER_SPEED = 280;
 
-export const ART_REV = 66;
+export const ART_REV = 68;
 export const HIGH_SCORE_KEY = "fnf-highscore-v1";
 export const CLEARED_KEY = "fnf-cleared-v1";

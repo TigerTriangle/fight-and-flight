@@ -70,6 +70,14 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("shock", `/game/shock.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("firebomb", `/game/firebomb.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("crate", `/game/crate.png${v}`, {
       frameWidth: 192,
       frameHeight: 192,
@@ -391,6 +399,18 @@ export class PreloadScene extends Phaser.Scene {
       key: "carpet-burn",
       frames: this.anims.generateFrameNumbers("carpet", { start: 0, end: 3 }),
       frameRate: 20,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "shock-ring",
+      frames: this.anims.generateFrameNumbers("shock", { start: 0, end: 3 }),
+      frameRate: 16,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "firebomb-roll",
+      frames: this.anims.generateFrameNumbers("firebomb", { start: 0, end: 3 }),
+      frameRate: 14,
       repeat: -1,
     });
     this.anims.create({

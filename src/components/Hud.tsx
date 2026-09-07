@@ -1,4 +1,4 @@
-import { Bomb, ChevronsDown, Crosshair, EyeOff, Flame, Pause, Zap } from "lucide-react";
+import { Bomb, ChevronsDown, CircleDot, Crosshair, EyeOff, Flame, Pause, Waves, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bridge } from "@/game/bridge";
 import { worldById } from "@/game/worlds";
@@ -96,7 +96,11 @@ export function Hud() {
                       ? ChevronsDown
                       : specialName === "Cloak"
                         ? EyeOff
-                        : Flame;
+                        : specialName === "Wave"
+                          ? Waves
+                          : specialName === "Roll"
+                            ? CircleDot
+                            : Flame;
                 return (
                   <Icon
                     key={i}

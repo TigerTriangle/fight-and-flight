@@ -13,6 +13,10 @@ import {
   LASER_STUN_MS,
   MISSILE_LIFE,
   MISSILE_SPEED,
+  SHOCK_LIFE,
+  SHOCK_SPEED,
+  ROLLER_LIFE,
+  ROLLER_SPEED,
   PLAYER_X_MAX,
   PLAYER_X_MIN,
 } from "./config";
@@ -233,10 +237,87 @@ export class CarpetLine extends Phaser.Physics.Arcade.Sprite {
   }
 }
 
+export class Shockwave extends Phaser.Physics.Arcade.Sprite {
+  life = SHOCK_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "shock");
+  }
+
+  blast(x: number, y: number) {
+    this.life = SHOCK_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(67);
+    this.setAlpha(0.95);
+    this.clearTint();
+    this.setRotation(0);
+    this.setScale(0.92, 1.15);
+    this.setVelocity(SHOCK_SPEED, 0);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(120, 200).setOffset(68, 28);
+    this.play("shock-ring", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    const grow = 1 + (SHOCK_LIFE - this.life) * 0.9;
+    this.setScale(0.92 * grow, 1.15 * grow);
+    this.setAlpha(Math.max(0, this.life / SHOCK_LIFE));
+    if (this.life <= 0 || this.x > 1400) this.disableBody(true, true);
+  }
+}
+
+export class FireBomb extends Phaser.Physics.Arcade.Sprite {
+  life = ROLLER_LIFE;
+  rolling = false;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "firebomb");
+  }
+
+  drop(x: number, y: number, grav = 1) {
+    this.life = ROLLER_LIFE;
+    this.rolling = false;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(70);
+    this.setAlpha(1);
+    this.clearTint();
+    this.setScale(0.42);
+    this.setRotation(0);
+    this.setVelocity(70, 80 * grav);
+    this.setAngularVelocity(180);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * grav);
+    body?.setSize(88, 88).setOffset(84, 84);
+    this.play("firebomb-roll", true);
+  }
+
+  startRoll(dir: number) {
+    this.rolling = true;
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setGravityY(0);
+    this.setVelocity(dir * ROLLER_SPEED, 0);
+    this.setAngularVelocity(dir * 420);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.x > 1420 || this.x < -100 || this.y > 820) this.disableBody(true, true);
+  }
+}
+
 export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
   hp = 2;
   fireAcc = 0.6;
   low = false;
+  falling = false;
   kind: "trainer" | "fighter" | "heavy" | "boss" = "fighter";
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
@@ -257,6 +338,7 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
   ) {
     this.kind = opts?.kind ?? "fighter";
     this.low = opts?.low ?? false;
+    this.falling = false;
     this.hp =
       opts?.hp ??
       (this.kind === "boss" ? 10 : this.kind === "heavy" ? 3 : this.kind === "trainer" ? 1 : 2);
@@ -279,16 +361,36 @@ export class EnemyFighter extends Phaser.Physics.Arcade.Sprite {
       this.setScale(0.6);
     }
     this.setVelocity(speed, this.kind === "boss" || this.kind === "heavy" ? 0 : (Math.random() - 0.5) * 36);
+    this.setRotation(0);
+    this.setAngularVelocity(0);
     this.play(opts?.anim ?? "enemy-fly", true);
     const body = bodyOf(this);
+    body?.setAllowGravity(false);
     if (this.kind === "boss") body?.setSize(230, 110).setOffset(12, 72);
     else if (this.kind === "heavy") body?.setSize(226, 96).setOffset(14, 80);
     else body?.setSize(220, 88).setOffset(18, 84);
   }
 
+  knockDown() {
+    if (this.falling || this.kind === "boss") return;
+    this.falling = true;
+    this.fireAcc = 99;
+    this.setTint(0xc9b090);
+    this.setAngularVelocity(140);
+    const body = bodyOf(this);
+    const vx = body?.velocity.x ?? -120;
+    body?.setAllowGravity(true);
+    body?.setGravityY(1180);
+    this.setVelocity(vx * 0.45, 90);
+  }
+
   preUpdate(time: number, delta: number) {
     super.preUpdate(time, delta);
     if (!this.active) return;
+    if (this.falling) {
+      if (this.x < -160 || this.y > 820) this.disableBody(true, true);
+      return;
+    }
     if (this.kind === "boss") {
       if (this.x < 620) {
         this.setVelocity(-8, Math.sin(time / 420) * 28);
