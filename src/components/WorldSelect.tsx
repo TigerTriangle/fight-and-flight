@@ -1,20 +1,18 @@
 import { useEffect } from "react";
-import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/Hint";
-import { WORLDS, isWorldOpen, worldById, type WorldId } from "@/game/worlds";
+import { WORLDS, worldById, type WorldId } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
 import { cn } from "@/lib/utils";
 
 export function WorldSelect() {
   const worldId = useGameStore((s) => s.worldId);
-  const clearedWorlds = useGameStore((s) => s.clearedWorlds);
   const best = useGameStore((s) => s.best);
   const selected = worldById(worldId);
 
-  const pick = (id: WorldId, open: boolean) => {
+  const pick = (id: WorldId) => {
     useGameStore.getState().setWorld(id);
-    if (open) useGameStore.getState().setPhase("briefing");
+    useGameStore.getState().setPhase("briefing");
   };
 
   const back = () => useGameStore.getState().setPhase("hangar");
@@ -32,10 +30,7 @@ export function WorldSelect() {
       }
       if (e.code === "Enter") {
         e.preventDefault();
-        const w = worldById(useGameStore.getState().worldId);
-        if (isWorldOpen(w.id, useGameStore.getState().clearedWorlds)) {
-          useGameStore.getState().setPhase("briefing");
-        }
+        pick(useGameStore.getState().worldId);
       }
       if (e.code === "Escape") back();
     };
@@ -62,51 +57,32 @@ export function WorldSelect() {
       <div className="mx-auto mt-3 grid min-h-0 w-full max-w-2xl flex-1 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
         {WORLDS.map((w) => {
           const active = w.id === selected.id;
-          const open = isWorldOpen(w.id, clearedWorlds);
           return (
             <button
               key={w.id}
               type="button"
               aria-current={active}
-              aria-disabled={!open}
-              onClick={() => pick(w.id, open)}
+              onClick={() => pick(w.id)}
               className={cn(
                 "flex min-h-14 items-center gap-3 rounded-[var(--radius-md)] border px-3 py-2.5 text-left",
-                open
-                  ? active
-                    ? "border-accent bg-surface"
-                    : "border-border bg-surface/80 hover:bg-surface"
-                  : "border-border/50 bg-bg/40 text-muted",
+                active
+                  ? "border-accent bg-surface"
+                  : "border-border bg-surface/80 hover:bg-surface",
               )}
             >
-              <span
-                className={cn(
-                  "w-8 shrink-0 font-display text-2xl leading-none tabular-nums",
-                  open ? "text-fg" : "text-muted/70",
-                )}
-              >
+              <span className="w-8 shrink-0 font-display text-2xl leading-none tabular-nums text-fg">
                 {String(w.index).padStart(2, "0")}
               </span>
               <span className="min-w-0 flex-1">
-                <span
-                  className={cn(
-                    "block font-display text-2xl leading-none tracking-tight",
-                    open ? "text-fg" : "text-muted",
-                  )}
-                >
+                <span className="block font-display text-2xl leading-none tracking-tight text-fg">
                   {w.name}
                 </span>
                 <span className="mt-1 block text-xs text-muted">
-                  {open
-                    ? w.placeholder
-                      ? `${w.tag} · Coming online`
-                      : best[w.id]?.medal && best[w.id]?.medal !== "none"
-                        ? `${w.tag} · ${best[w.id]!.medal}`
-                        : w.tag
-                    : `Clear ${WORLDS.find((x) => x.index === w.index - 1)?.name ?? "the previous theater"}.`}
+                  {best[w.id]?.medal && best[w.id]?.medal !== "none"
+                    ? `${w.tag} · ${best[w.id]!.medal}`
+                    : w.tag}
                 </span>
               </span>
-              {!open ? <Lock className="size-4 shrink-0 text-muted" aria-hidden /> : null}
             </button>
           );
         })}

@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { SavePanel } from "@/components/SavePanel";
 import { audio } from "@/game/audio";
 import { bridge } from "@/game/bridge";
 import { useGameStore } from "@/game/store";
@@ -64,7 +63,6 @@ export function PauseScreen() {
           >
             {autoFire ? "Auto-fire on" : "Auto-fire off"}
           </Button>
-          <SavePanel compact />
           <Button variant="ghost" onClick={() => bridge.send("title")}>
             Title
           </Button>

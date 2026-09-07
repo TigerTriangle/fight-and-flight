@@ -1,4 +1,4 @@
-import { Bomb, ChevronsDown, CircleDot, Crosshair, EyeOff, Flame, Pause, Waves, Zap } from "lucide-react";
+import { Bomb, ChevronsDown, CircleDot, Crosshair, EyeOff, Flame, Pause, Waves } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { bridge } from "@/game/bridge";
 import { worldById } from "@/game/worlds";
@@ -18,7 +18,6 @@ export function Hud() {
   const worldId = useGameStore((s) => s.worldId);
   const worldName = worldById(worldId).name;
   const beat = useGameStore((s) => s.beat);
-  const burst = worldId === "mare";
 
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
@@ -60,23 +59,20 @@ export function Hud() {
         </div>
         <div className="rounded-[var(--radius-md)] border border-border bg-bg/70 px-3 py-2">
           <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">
-            {burst ? "Burst" : "Bombs"}
+            Bombs
           </p>
           <div
             className="mt-1 flex max-w-20 flex-wrap gap-1"
-            aria-label={`${bombs} of ${bombsMax} ${burst ? "bursts" : "bombs"}`}
+            aria-label={`${bombs} of ${bombsMax} bombs`}
           >
-            {Array.from({ length: bombsMax }).map((_, i) => {
-              const Icon = burst ? Zap : Bomb;
-              return (
-                <Icon
-                  key={i}
-                  className={`size-4 ${i < bombs ? "text-accent" : "text-muted/30"}`}
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
-              );
-            })}
+            {Array.from({ length: bombsMax }).map((_, i) => (
+              <Bomb
+                key={i}
+                className={`size-4 ${i < bombs ? "text-accent" : "text-muted/30"}`}
+                strokeWidth={2.25}
+                aria-hidden
+              />
+            ))}
           </div>
         </div>
         {specialMax > 0 ? (

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Hint } from "@/components/Hint";
-import { SavePanel } from "@/components/SavePanel";
 import { audio } from "@/game/audio";
 import { bridge } from "@/game/bridge";
 import { PLANES, planeById, type PlaneId } from "@/game/planes";
@@ -37,7 +36,6 @@ export function HangarScreen() {
   const planeId = useGameStore((s) => s.planeId);
   const plane = planeById(planeId);
   const idx = Math.max(0, PLANES.findIndex((p) => p.id === planeId));
-  const [logbook, setLogbook] = useState(false);
 
   const select = (id: PlaneId) => useGameStore.getState().setPlane(id);
 
@@ -80,11 +78,6 @@ export function HangarScreen() {
           Hangar
         </p>
         <div className="flex items-center gap-1">
-          <Hint text="Saves, backup file, and your Pilot code.">
-            <Button variant="ghost" className="min-h-11" onClick={() => setLogbook((v) => !v)}>
-              Logbook
-            </Button>
-          </Hint>
           <Hint text="Back to the title card.">
             <Button
               variant="ghost"
@@ -177,11 +170,6 @@ export function HangarScreen() {
           Theaters
         </Button>
       </div>
-      {logbook ? (
-        <div className="mx-auto mt-3 w-full max-w-lg rounded-[var(--radius-xl)] border border-border bg-surface p-4">
-          <SavePanel />
-        </div>
-      ) : null}
     </div>
   );
 }

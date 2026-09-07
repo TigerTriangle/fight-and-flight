@@ -114,7 +114,7 @@ export const WORLDS: WorldDef[] = [
     index: 4,
     name: "High Peaks",
     tag: "alpine",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
       "Thin air over the snow line. Interceptors come in fast. Snowcats and flak hold the valley. Break the ridge bomber at the end — do not waste the burst.",
@@ -126,7 +126,7 @@ export const WORLDS: WorldDef[] = [
     index: 5,
     name: "Canopy",
     tag: "jungle",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
       "Jungle river. They wait in the brush and pop from the trees. Clip the kites to keep bombs on the sampans. Break the Howler at the end.",
@@ -138,7 +138,7 @@ export const WORLDS: WorldDef[] = [
     index: 6,
     name: "Underdark",
     tag: "tunnel",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
       "Black tunnel. The ceiling tries to kiss you. Drones own the slot; carts and drills hold the rails. Cut the Borer at the end — do not scrape the rock.",
@@ -150,7 +150,7 @@ export const WORLDS: WorldDef[] = [
     index: 7,
     name: "Black Orbit",
     tag: "space",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
       "Open vacuum. Needles in the lane, hulks on the belt. Bombs still crack the wrecks. Break the Ring at the end.",
@@ -162,11 +162,11 @@ export const WORLDS: WorldDef[] = [
     index: 8,
     name: "Pale Mare",
     tag: "moon",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
-      "Thin dust over the mare. Hoppers float; rovers and flak hold the craters. Burst the crater line — no bombs here. Break the Walker at the end.",
-    slogan: "With cutting edge lasers, victory is certain!",
+      "Thin dust over the mare. Hoppers float; rovers and flak hold the craters. Bombs earn their keep on the crater line. Break the Walker at the end.",
+    slogan: "Hold the mare. Strike from the dust!",
     poster: "poster-mare",
   },
   {
@@ -174,10 +174,10 @@ export const WORLDS: WorldDef[] = [
     index: 9,
     name: "Vermillion",
     tag: "alien world",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
-      "Alien mesas and spore stacks. Moths in the lane, crawlers on the rust. Burst the turrets — no bombs here. Clip the wings for racks. Break the Bloom at the end.",
+      "Alien mesas and spore stacks. Moths in the lane, crawlers on the rust. Bomb the turrets. Clip the wings for racks. Break the Bloom at the end.",
     slogan: "Strange world. Same fight. Finish the job!",
     poster: "poster-vermillion",
   },
@@ -186,10 +186,10 @@ export const WORLDS: WorldDef[] = [
     index: 10,
     name: "Lumenfall",
     tag: "fantasy",
-    open: false,
+    open: true,
     placeholder: false,
     briefing:
-      "Floating isles and lantern light. Wyverns in the lane, golems on the stone. Burst the spires — no bombs here. Clip the wings for racks. Break the Lumen at the end.",
+      "Floating isles and lantern light. Wyverns in the lane, golems on the stone. Bomb the spires. Clip the wings for racks. Break the Lumen at the end.",
     slogan: "Buy war bonds\nso we\ncan slay dragons!",
     poster: "poster-lumenfall",
   },
@@ -201,11 +201,8 @@ export function worldById(id: string | undefined | null): WorldDef {
   return WORLDS.find((w) => w.id === id) ?? WORLDS[0];
 }
 
-export function isWorldOpen(id: WorldId, cleared: WorldId[]): boolean {
-  const w = worldById(id);
-  if (w.index <= 3) return true;
-  const prev = WORLDS.find((x) => x.index === w.index - 1);
-  return !!prev && cleared.includes(prev.id);
+export function isWorldOpen(_id?: WorldId, _cleared?: WorldId[]): boolean {
+  return true;
 }
 
 const HEARTLAND_KIT: StageKit = {
@@ -488,7 +485,6 @@ const MARE_KIT: StageKit = {
   aaShot: 500,
   grav: 0.38,
   float: 0.82,
-  secondary: "laser",
   hp: { truck: 9, aa: 12, tank: 18, trainer: 1, fighter: 7, heavy: 9, boss: 34 },
 };
 
@@ -526,7 +522,6 @@ const VERM_KIT: StageKit = {
   scroll: 358,
   airSpeed: 1.82,
   aaShot: 530,
-  secondary: "laser",
   hp: { truck: 10, aa: 13, tank: 20, trainer: 1, fighter: 8, heavy: 10, boss: 38 },
 };
 
@@ -564,7 +559,6 @@ const LUMEN_KIT: StageKit = {
   scroll: 380,
   airSpeed: 1.92,
   aaShot: 560,
-  secondary: "laser",
   airProj: "fireball",
   hp: { truck: 11, aa: 14, tank: 22, trainer: 1, fighter: 9, heavy: 11, boss: 42 },
 };

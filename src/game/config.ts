@@ -55,5 +55,3 @@ export const ROLLER_LIFE = 4.2;
 export const ROLLER_SPEED = 280;
 
 export const ART_REV = 68;
-export const HIGH_SCORE_KEY = "fnf-highscore-v1";
-export const CLEARED_KEY = "fnf-cleared-v1";

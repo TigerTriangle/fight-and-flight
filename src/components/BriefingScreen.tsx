@@ -4,20 +4,16 @@ import { audio } from "@/game/audio";
 import { bridge } from "@/game/bridge";
 import { ART_REV } from "@/game/config";
 import { planeById } from "@/game/planes";
-import { isWorldOpen, worldById } from "@/game/worlds";
+import { worldById } from "@/game/worlds";
 import { useGameStore } from "@/game/store";
 
 export function BriefingScreen() {
   const worldId = useGameStore((s) => s.worldId);
   const planeId = useGameStore((s) => s.planeId);
-  const clearedWorlds = useGameStore((s) => s.clearedWorlds);
   const world = worldById(worldId);
   const plane = planeById(planeId);
-  const open = isWorldOpen(world.id, clearedWorlds);
-  const locked = !open || world.placeholder;
 
   const fly = () => {
-    if (locked) return;
     audio.unlock();
     useGameStore.getState().resetRun();
     useGameStore.getState().setPhase("playing");
@@ -62,19 +58,17 @@ export function BriefingScreen() {
         </figure>
         <p className="mt-3 text-center text-sm text-muted">
           {plane.name}
-          {world.placeholder ? " · Charts unfinished" : ""}
         </p>
         <p className="mx-auto mt-1 max-w-md text-center font-sans text-sm leading-relaxed text-fg/90">
-          {world.briefing || "This theater is still being painted."}
+          {world.briefing}
         </p>
         <div className="mt-4 flex shrink-0 flex-col gap-2 sm:mt-5 sm:gap-3">
           <Button
             size="lg"
             className="font-display text-2xl tracking-wide"
-            disabled={locked}
             onClick={fly}
           >
-            {locked ? "Coming online" : "Fly"}
+            Fly
           </Button>
           <Button variant="secondary" onClick={back}>
             Theaters

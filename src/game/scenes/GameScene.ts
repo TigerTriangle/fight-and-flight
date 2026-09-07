@@ -812,13 +812,10 @@ export class GameScene extends Phaser.Scene {
     if (actions.bomb && this.bombCd <= 0 && this.bombs > 0) {
       this.bombCd = BOMB_COOLDOWN;
       this.bombs -= 1;
-      if (this.kit.secondary === "laser") this.fireBurst();
-      else {
-        const bomb = this.bombGroup.get(this.player.x, this.player.y + 24) as Bomb | null;
-        if (bomb) {
-          bomb.drop(this.player.x, this.player.y + 24, this.kit.grav ?? 1);
-          audio.bombDrop();
-        }
+      const bomb = this.bombGroup.get(this.player.x, this.player.y + 24) as Bomb | null;
+      if (bomb) {
+        bomb.drop(this.player.x, this.player.y + 24, this.kit.grav ?? 1);
+        audio.bombDrop();
       }
       this.syncHud();
       this.trySpawnCrate();
@@ -1318,7 +1315,7 @@ export class GameScene extends Phaser.Scene {
       x,
       -36,
       CRATE_FALL_SPEED * (this.kit.grav ?? 1),
-      this.kit.secondary === "laser" ? "BURST" : "BOMB",
+      "BOMB",
     );
   }
 
