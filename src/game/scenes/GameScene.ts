@@ -6,6 +6,7 @@ import {
   ALLY_FIRE,
   ALLY_SHELL,
   ALLY_SPEED,
+  AVALANCHE_COUNT,
   BOMB_COOLDOWN,
   BOMB_CRATE_AT,
   BOMB_PICKUP,
@@ -27,6 +28,7 @@ import {
   PLAYER_X_MIN,
   PLAYER_Y_MIN,
   SCROLL_SPEED,
+  SKIP_MAX,
   SPECIAL_COOLDOWN,
   FLARE_COUNT,
   CARPET_SHOTS,
@@ -58,6 +60,10 @@ import {
 import {
   AllyTank,
   Bomb,
+  CanyonRock,
+  CeilingBolt,
+  SnowBomb,
+  SkipBomb,
   Torpedo,
   Bullet,
   CarpetLine,
@@ -107,6 +113,30 @@ function asBullet(obj: unknown): Bullet | null {
 function asEnemy(obj: unknown): EnemyFighter | null {
   const s = asSprite(obj);
   if (s && "fireAcc" in s) return s as EnemyFighter;
+  return null;
+}
+
+function asBolt(obj: unknown): CeilingBolt | null {
+  const s = asSprite(obj);
+  if (s && "bolt" in s) return s as CeilingBolt;
+  return null;
+}
+
+function asRock(obj: unknown): CanyonRock | null {
+  const s = asSprite(obj);
+  if (s && "rock" in s) return s as CanyonRock;
+  return null;
+}
+
+function asSnow(obj: unknown): SnowBomb | null {
+  const s = asSprite(obj);
+  if (s && "snow" in s) return s as SnowBomb;
+  return null;
+}
+
+function asSkip(obj: unknown): SkipBomb | null {
+  const s = asSprite(obj);
+  if (s && "skip" in s) return s as SkipBomb;
   return null;
 }
 
@@ -243,6 +273,10 @@ export class GameScene extends Phaser.Scene {
   private crates!: Phaser.Physics.Arcade.Group;
   private allies!: Phaser.Physics.Arcade.Group;
   private torpedoes!: Phaser.Physics.Arcade.Group;
+  private bolts!: Phaser.Physics.Arcade.Group;
+  private rocks!: Phaser.Physics.Arcade.Group;
+  private snowballs!: Phaser.Physics.Arcade.Group;
+  private skipBombs!: Phaser.Physics.Arcade.Group;
   private fx!: Phaser.Physics.Arcade.Group;
   private decor!: Phaser.GameObjects.Group;
 
@@ -396,6 +430,26 @@ export class GameScene extends Phaser.Scene {
       maxSize: 4,
       runChildUpdate: true,
     });
+    this.bolts = this.physics.add.group({
+      classType: CeilingBolt,
+      maxSize: 4,
+      runChildUpdate: true,
+    });
+    this.rocks = this.physics.add.group({
+      classType: CanyonRock,
+      maxSize: 16,
+      runChildUpdate: true,
+    });
+    this.snowballs = this.physics.add.group({
+      classType: SnowBomb,
+      maxSize: 4,
+      runChildUpdate: true,
+    });
+    this.skipBombs = this.physics.add.group({
+      classType: SkipBomb,
+      maxSize: 4,
+      runChildUpdate: true,
+    });
     this.fx = this.physics.add.group({
       classType: FxSprite,
       maxSize: 20,
@@ -498,6 +552,26 @@ export class GameScene extends Phaser.Scene {
       const truck = asTruck(a) ?? asTruck(b);
       if (torp && truck) this.hitTorpedo(torp, truck);
     });
+    this.physics.add.overlap(this.rocks, this.trucks, (a, b) => {
+      const rock = asRock(a) ?? asRock(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (rock && truck) this.hitRockGround(rock, truck);
+    });
+    this.physics.add.overlap(this.rocks, this.enemies, (a, b) => {
+      const rock = asRock(a) ?? asRock(b);
+      const enemy = asEnemy(a) ?? asEnemy(b);
+      if (rock && enemy) this.hitRockAir(rock, enemy);
+    });
+    this.physics.add.overlap(this.snowballs, this.trucks, (a, b) => {
+      const snow = asSnow(a) ?? asSnow(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (snow && truck) this.hitSnow(snow, truck);
+    });
+    this.physics.add.overlap(this.skipBombs, this.trucks, (a, b) => {
+      const skip = asSkip(a) ?? asSkip(b);
+      const truck = asTruck(a) ?? asTruck(b);
+      if (skip && truck) this.hitSkip(skip, truck);
+    });
 
     this.unsub = bridge.on((cmd) => this.onCmd(cmd));
     this.events.once("shutdown", () => {
@@ -592,6 +666,10 @@ export class GameScene extends Phaser.Scene {
       this.cratesFall();
       this.alliesDrive(dt);
       this.torpedoesRun();
+      this.boltsFly();
+      this.rocksFall();
+      this.snowballsRun();
+      this.skipBombsRun();
       this.steerDarts();
       this.steerDecoys();
       this.lockMissiles();
@@ -652,6 +730,10 @@ export class GameScene extends Phaser.Scene {
       this.crates,
       this.allies,
       this.torpedoes,
+      this.bolts,
+      this.rocks,
+      this.snowballs,
+      this.skipBombs,
       this.fx,
     ];
     for (const g of groups) {
@@ -1406,19 +1488,180 @@ export class GameScene extends Phaser.Scene {
   }
 
   private callBusy() {
-    return this.allies.countActive(true) > 0 || this.torpedoes.countActive(true) > 0;
+    return (
+      this.allies.countActive(true) > 0 ||
+      this.torpedoes.countActive(true) > 0 ||
+      this.bolts.countActive(true) > 0 ||
+      this.rocks.countActive(true) > 0 ||
+      this.snowballs.countActive(true) > 0 ||
+      this.skipBombs.countActive(true) > 0
+    );
   }
 
   private spawnCallCrate() {
     const x = Phaser.Math.Clamp(this.player.x + 36, PLAYER_X_MIN + 40, PLAYER_X_MAX - 16);
     const crate = this.crates.get(x, -36) as CrateDrop | null;
-    const label = this.kit.pickup === "torpedo" ? "TORP" : "CALL";
+    const label =
+      this.kit.pickup === "torpedo"
+        ? "TORP"
+        : this.kit.pickup === "avalanche"
+          ? "ROCK"
+          : this.kit.pickup === "snow"
+            ? "SNOW"
+            : this.kit.pickup === "skip"
+              ? "SKIP"
+              : "CALL";
     crate?.drop(x, -36, CRATE_FALL_SPEED * (this.kit.grav ?? 1), label, "ally");
   }
 
   private usePickup() {
     if (this.kit.pickup === "torpedo") this.fireTorpedo();
+    else if (this.kit.pickup === "avalanche") this.fireAvalanche();
+    else if (this.kit.pickup === "snow") this.fireSnow();
+    else if (this.kit.pickup === "skip") this.fireSkip();
     else this.callAlly();
+  }
+
+  private fireAvalanche() {
+    const x = this.player.x + 28;
+    const y = this.player.y - 10;
+    const bolt = this.bolts.get(x, y) as CeilingBolt | null;
+    bolt?.fire(x, y);
+    audio.spark();
+  }
+
+  private boltsFly() {
+    if (!this.chm) return;
+    for (const child of this.bolts.getChildren()) {
+      const bolt = child as CeilingBolt;
+      if (!bolt.active) continue;
+      const ceil = ceilingY(this.worldX + bolt.x, this.chm);
+      if (bolt.y <= ceil + 16) {
+        const ix = bolt.x;
+        const iy = ceil + 8;
+        bolt.disableBody(true, true);
+        this.startAvalanche(ix, iy);
+      }
+    }
+  }
+
+  private startAvalanche(x: number, y: number) {
+    this.playFx(x, y, "blast");
+    audio.boom();
+    this.trauma = Math.min(1, this.trauma + 0.22);
+    for (let i = 0; i < AVALANCHE_COUNT; i += 1) {
+      const rx = x + (i - (AVALANCHE_COUNT - 1) / 2) * 36 + (Math.random() - 0.5) * 18;
+      const rock = this.rocks.get(rx, y) as CanyonRock | null;
+      rock?.fall(rx, y, 40 + Math.random() * 90, this.kit.grav ?? 1);
+    }
+  }
+
+  private rocksFall() {
+    if (!this.hm) return;
+    for (const child of this.rocks.getChildren()) {
+      const rock = child as CanyonRock;
+      if (!rock.active) continue;
+      const gy = this.solidFloor(this.worldX + rock.x);
+      if (rock.y >= gy - 12) {
+        this.playFx(rock.x, gy - 8, "hit");
+        rock.disableBody(true, true);
+      }
+    }
+  }
+
+  private hitRockAir(rock: CanyonRock, enemy: EnemyFighter) {
+    if (!rock.active || !enemy.active) return;
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.spark();
+      if (enemy.hp > 0) return;
+    }
+    this.killEnemy(enemy, false, true);
+  }
+
+  private hitRockGround(_rock: CanyonRock, truck: Truck) {
+    if (!truck.active) return;
+    this.killTruck(truck);
+  }
+
+  private fireSnow() {
+    const x = this.player.x + 12;
+    const y = this.player.y + 24;
+    const snow = this.snowballs.get(x, y) as SnowBomb | null;
+    if (!snow) return;
+    snow.drop(x, y, this.kit.grav ?? 1);
+    audio.bombDrop();
+  }
+
+  private snowballsRun() {
+    if (!this.hm) return;
+    for (const child of this.snowballs.getChildren()) {
+      const snow = child as SnowBomb;
+      if (!snow.active) continue;
+      const gy = this.solidFloor(this.worldX + snow.x) - 10 - snow.scaleY * 36;
+      if (!snow.rolling) {
+        if (snow.y >= gy) {
+          const prey = this.nearestTruck(snow.x);
+          const dir = !prey || Math.abs(prey.x - snow.x) < 8 ? 1 : Math.sign(prey.x - snow.x) || 1;
+          snow.startRoll(dir);
+          snow.y = gy;
+        }
+        continue;
+      }
+      snow.y = gy;
+      snow.setVelocityY(0);
+    }
+  }
+
+  private hitSnow(snow: SnowBomb, truck: Truck) {
+    if (!snow.active || !truck.active || !snow.rolling) return;
+    const x = truck.x;
+    const y = truck.y - 24;
+    snow.disableBody(true, true);
+    this.killTruck(truck);
+    this.playFx(x, y, "blast");
+    audio.boom();
+  }
+
+  private fireSkip() {
+    const x = this.player.x + 16;
+    const y = this.player.y + 20;
+    const bomb = this.skipBombs.get(x, y) as SkipBomb | null;
+    if (!bomb) return;
+    bomb.drop(x, y, this.kit.grav ?? 1);
+    audio.bombDrop();
+  }
+
+  private skipBombsRun() {
+    if (!this.hm) return;
+    const grav = this.kit.grav ?? 1;
+    for (const child of this.skipBombs.getChildren()) {
+      const bomb = child as SkipBomb;
+      if (!bomb.active) continue;
+      const gy = this.waterLine(this.worldX + bomb.x) - 10;
+      const body = bomb.body as Phaser.Physics.Arcade.Body | undefined;
+      if (bomb.y < gy || (body && body.velocity.y < 0)) continue;
+      if (bomb.hops >= SKIP_MAX) {
+        this.playFx(bomb.x, gy, "hit");
+        bomb.disableBody(true, true);
+        continue;
+      }
+      bomb.y = gy;
+      bomb.bounce(grav);
+      this.playFx(bomb.x, gy + 6, "hit");
+      audio.spark();
+    }
+  }
+
+  private hitSkip(bomb: SkipBomb, truck: Truck) {
+    if (!bomb.active || !truck.active) return;
+    const x = truck.x;
+    const y = truck.y - 24;
+    bomb.disableBody(true, true);
+    this.killTruck(truck);
+    this.playFx(x, y, "blast");
+    audio.boom();
   }
 
   private fireTorpedo() {

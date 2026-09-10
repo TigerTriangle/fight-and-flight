@@ -49,6 +49,18 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("canyon-rock", `/game/canyon-rock.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("snowball", `/game/snowball.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("skip-bomb", `/game/skip-bomb.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("radar", `/game/radar.png${v}`, {
       frameWidth: 256,
       frameHeight: 256,
@@ -383,6 +395,24 @@ export class PreloadScene extends Phaser.Scene {
       key: "torpedo-run",
       frames: this.anims.generateFrameNumbers("torpedo", { start: 0, end: 3 }),
       frameRate: 14,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "canyon-rock-tumble",
+      frames: this.anims.generateFrameNumbers("canyon-rock", { start: 0, end: 3 }),
+      frameRate: 12,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "snowball-roll",
+      frames: this.anims.generateFrameNumbers("snowball", { start: 0, end: 3 }),
+      frameRate: 14,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "skip-bomb-spin",
+      frames: this.anims.generateFrameNumbers("skip-bomb", { start: 0, end: 3 }),
+      frameRate: 16,
       repeat: -1,
     });
     this.anims.create({

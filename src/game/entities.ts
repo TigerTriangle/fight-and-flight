@@ -8,6 +8,19 @@ import {
   CARPET_ANGLE,
   CRATE_FALL_SPEED,
   ALLY_SPEED,
+  CEILING_SHOT,
+  ROCK_LIFE,
+  SNOW_GROW,
+  SNOW_LIFE,
+  SNOW_SCALE_MAX,
+  SNOW_SCALE_MIN,
+  SNOW_SPEED,
+  SKIP_BOUNCE,
+  SKIP_DECAY,
+  SKIP_LIFE,
+  SKIP_MAX,
+  SKIP_SCALE,
+  SKIP_SPEED,
   TORPEDO_LIFE,
   TORPEDO_SPEED,
   ENEMY_BULLET_SPEED,
@@ -634,16 +647,34 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
   private showMarks(label = "BOMB") {
     const ally = label === "CALL";
     const torp = label === "TORP";
+    const rock = label === "ROCK";
+    const snow = label === "SNOW";
+    const skip = label === "SKIP";
     const laser = label === "BURST";
-    const badgeKey = ally ? "ally-tank" : torp ? "torpedo" : laser ? "laser-bolt" : "bomb";
+    const badgeKey = ally
+      ? "ally-tank"
+      : torp
+        ? "torpedo"
+        : rock
+          ? "canyon-rock"
+          : snow
+            ? "snowball"
+            : skip
+              ? "skip-bomb"
+              : laser
+                ? "laser-bolt"
+                : "bomb";
     if (!this.badge) {
       this.badge = this.scene.add.sprite(this.x, this.y, badgeKey, 0);
       this.badge.setDepth(59);
     }
     this.badge.setTexture(badgeKey);
-    this.badge.setScale(ally ? 0.28 : torp ? 0.4 : laser ? 0.55 : 0.34);
+    this.badge.setScale(ally ? 0.28 : torp ? 0.4 : rock ? 0.32 : snow ? 0.14 : skip ? 0.14 : laser ? 0.55 : 0.34);
     this.badge.setVisible(true);
     if (torp) this.badge.play("torpedo-run", true);
+    else if (rock) this.badge.play("canyon-rock-tumble", true);
+    else if (snow) this.badge.play("snowball-roll", true);
+    else if (skip) this.badge.play("skip-bomb-spin", true);
     else if (!laser && !ally) this.badge.play("bomb-spin", true);
     else this.badge.anims.stop();
     if (!this.tag) {
@@ -742,6 +773,160 @@ export class Torpedo extends Phaser.Physics.Arcade.Sprite {
     body?.setAllowGravity(false);
     body?.setGravityY(0);
     this.setVelocity(TORPEDO_SPEED, 0);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.x > 1420 || this.y > 820) this.disableBody(true, true);
+  }
+}
+
+export class CeilingBolt extends Phaser.Physics.Arcade.Sprite {
+  bolt = true;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "bullet");
+  }
+
+  fire(x: number, y: number) {
+    const ang = -Math.PI / 4;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(70);
+    this.setTexture("bullet");
+    this.setScale(0.42);
+    this.setTint(0xffc56a);
+    this.setRotation(ang);
+    this.setVelocity(Math.cos(ang) * CEILING_SHOT, Math.sin(ang) * CEILING_SHOT);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(72, 36).setOffset(28, 46);
+    this.play("bullet-fly", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    if (this.x > 1400 || this.y < -40) this.disableBody(true, true);
+  }
+}
+
+export class CanyonRock extends Phaser.Physics.Arcade.Sprite {
+  rock = true;
+  life = ROCK_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "canyon-rock");
+  }
+
+  fall(x: number, y: number, vx: number, grav = 1) {
+    this.life = ROCK_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(62);
+    this.clearTint();
+    this.setOrigin(0.5, 0.5);
+    this.setScale(0.38 + Math.random() * 0.18);
+    this.setVelocity(vx, 80);
+    this.setAngularVelocity(-180 + Math.random() * 360);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * 1.15 * grav);
+    body?.setSize(120, 120).setOffset(68, 68);
+    this.play("canyon-rock-tumble", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.y > 820 || this.x < -80 || this.x > 1400) this.disableBody(true, true);
+  }
+}
+
+export class SnowBomb extends Phaser.Physics.Arcade.Sprite {
+  snow = true;
+  life = SNOW_LIFE;
+  rolling = false;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "snowball");
+  }
+
+  drop(x: number, y: number, grav = 1) {
+    this.life = SNOW_LIFE;
+    this.rolling = false;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(48);
+    this.clearTint();
+    this.setOrigin(0.5, 0.5);
+    this.setScale(SNOW_SCALE_MIN);
+    this.setVelocity(70, 90 * grav);
+    this.setAngularVelocity(140);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * grav);
+    body?.setSize(48, 48).setOffset(104, 104);
+    this.play("snowball-roll", true);
+  }
+
+  startRoll(dir: number) {
+    this.rolling = true;
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setGravityY(0);
+    this.setVelocity(dir * SNOW_SPEED, 0);
+    this.setAngularVelocity(dir * 360);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    if (this.rolling) {
+      const next = Math.min(SNOW_SCALE_MAX, this.scaleX + SNOW_GROW * (delta / 1000));
+      this.setScale(next);
+      const hit = 36 + next * 80;
+      bodyOf(this)?.setSize(hit, hit).setOffset(128 - hit / 2, 128 - hit / 2);
+    }
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.x > 1420 || this.x < -120 || this.y > 820) this.disableBody(true, true);
+  }
+}
+
+export class SkipBomb extends Phaser.Physics.Arcade.Sprite {
+  skip = true;
+  hops = 0;
+  life = SKIP_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "skip-bomb");
+  }
+
+  drop(x: number, y: number, grav = 1) {
+    this.hops = 0;
+    this.life = SKIP_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(50);
+    this.clearTint();
+    this.setOrigin(0.5, 0.5);
+    this.setScale(SKIP_SCALE);
+    this.setVelocity(SKIP_SPEED * 0.55, 70 * grav);
+    this.setAngularVelocity(220);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * 0.85 * grav);
+    body?.setSize(48, 48).setOffset(104, 104);
+    this.play("skip-bomb-spin", true);
+  }
+
+  bounce(grav = 1) {
+    this.hops += 1;
+    const lift = SKIP_BOUNCE * Math.pow(SKIP_DECAY, this.hops - 1);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * 0.85 * grav);
+    this.setVelocity(SKIP_SPEED, -lift);
+    this.setAngularVelocity(280);
   }
 
   preUpdate(time: number, delta: number) {

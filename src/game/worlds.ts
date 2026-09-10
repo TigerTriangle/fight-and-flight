@@ -56,7 +56,7 @@ export type StageKit = {
   grav?: number;
   float?: number;
   secondary?: "bomb" | "laser";
-  pickup?: "ally" | "torpedo";
+  pickup?: "ally" | "torpedo" | "avalanche" | "snow" | "skip";
   airProj?: "bullet" | "fireball";
   groundSink?: number;
   bankSink?: number;
@@ -300,6 +300,7 @@ const CANYON_KIT: StageKit = {
   startY: 340,
   airMin: 290,
   airMax: 390,
+  pickup: "avalanche",
 };
 
 const PEAKS_KIT: StageKit = {
@@ -336,6 +337,7 @@ const PEAKS_KIT: StageKit = {
   scroll: 248,
   airSpeed: 1.34,
   hp: { truck: 5, aa: 8, tank: 11, trainer: 1, fighter: 3, heavy: 5, boss: 18 },
+  pickup: "snow",
 };
 
 const CANOPY_KIT: StageKit = {
@@ -374,6 +376,7 @@ const CANOPY_KIT: StageKit = {
   groundSink: 24,
   bankSink: 90,
   hp: { truck: 6, aa: 9, tank: 12, trainer: 1, fighter: 4, heavy: 6, boss: 22 },
+  pickup: "skip",
 };
 
 const DARK_KIT: StageKit = {
