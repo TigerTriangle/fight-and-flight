@@ -56,7 +56,7 @@ export type StageKit = {
   grav?: number;
   float?: number;
   secondary?: "bomb" | "laser";
-  pickup?: "ally" | "torpedo" | "avalanche" | "snow" | "skip";
+  pickup?: "ally" | "torpedo" | "avalanche" | "snow" | "skip" | "drone" | "hole" | "mine" | "fog";
   airProj?: "bullet" | "fireball";
   groundSink?: number;
   bankSink?: number;
@@ -416,6 +416,7 @@ const DARK_KIT: StageKit = {
   airSpeed: 1.52,
   aaShot: 440,
   hp: { truck: 7, aa: 10, tank: 14, trainer: 1, fighter: 5, heavy: 7, boss: 26 },
+  pickup: "drone",
 };
 
 const ORBIT_KIT: StageKit = {
@@ -453,6 +454,7 @@ const ORBIT_KIT: StageKit = {
   airSpeed: 1.62,
   aaShot: 470,
   hp: { truck: 8, aa: 11, tank: 16, trainer: 1, fighter: 6, heavy: 8, boss: 30 },
+  pickup: "hole",
 };
 
 const MARE_KIT: StageKit = {
@@ -492,6 +494,7 @@ const MARE_KIT: StageKit = {
   grav: 0.38,
   float: 0.82,
   hp: { truck: 9, aa: 12, tank: 18, trainer: 1, fighter: 7, heavy: 9, boss: 34 },
+  pickup: "mine",
 };
 
 const VERM_KIT: StageKit = {
@@ -529,6 +532,7 @@ const VERM_KIT: StageKit = {
   airSpeed: 1.82,
   aaShot: 530,
   hp: { truck: 10, aa: 13, tank: 20, trainer: 1, fighter: 8, heavy: 10, boss: 38 },
+  pickup: "fog",
 };
 
 const LUMEN_KIT: StageKit = {

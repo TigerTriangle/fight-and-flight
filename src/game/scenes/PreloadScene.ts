@@ -61,6 +61,22 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("ally-drone", `/game/ally-drone.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("black-hole", `/game/black-hole.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("lunar-mine", `/game/lunar-mine.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
+    this.load.spritesheet("fog-cloud", `/game/fog-cloud.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("radar", `/game/radar.png${v}`, {
       frameWidth: 256,
       frameHeight: 256,
@@ -413,6 +429,30 @@ export class PreloadScene extends Phaser.Scene {
       key: "skip-bomb-spin",
       frames: this.anims.generateFrameNumbers("skip-bomb", { start: 0, end: 3 }),
       frameRate: 16,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "ally-drone-fly",
+      frames: this.anims.generateFrameNumbers("ally-drone", { start: 0, end: 3 }),
+      frameRate: 14,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "black-hole-spin",
+      frames: this.anims.generateFrameNumbers("black-hole", { start: 0, end: 3 }),
+      frameRate: 16,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "lunar-mine-float",
+      frames: this.anims.generateFrameNumbers("lunar-mine", { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "fog-cloud-drift",
+      frames: this.anims.generateFrameNumbers("fog-cloud", { start: 0, end: 3 }),
+      frameRate: 8,
       repeat: -1,
     });
     this.anims.create({

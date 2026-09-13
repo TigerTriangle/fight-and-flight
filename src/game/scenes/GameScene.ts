@@ -35,6 +35,14 @@ import {
   CARPET_GAP,
   CARPET_BURST,
   CARPET_ANGLE,
+  DRONE_DODGE,
+  DRONE_FIRE,
+  DRONE_RANGE,
+  DRONE_SPEED,
+  HOLE_AIR_W,
+  HOLE_KILL,
+  HOLE_PULL,
+  MINE_RANGE,
   CLOAK_TIME,
 } from "../config";
 import {
@@ -64,6 +72,10 @@ import {
   CeilingBolt,
   SnowBomb,
   SkipBomb,
+  AllyDrone,
+  BlackHole,
+  LunarMine,
+  FogCloud,
   Torpedo,
   Bullet,
   CarpetLine,
@@ -137,6 +149,18 @@ function asSnow(obj: unknown): SnowBomb | null {
 function asSkip(obj: unknown): SkipBomb | null {
   const s = asSprite(obj);
   if (s && "skip" in s) return s as SkipBomb;
+  return null;
+}
+
+function asDrone(obj: unknown): AllyDrone | null {
+  const s = asSprite(obj);
+  if (s && "drone" in s) return s as AllyDrone;
+  return null;
+}
+
+function asFog(obj: unknown): FogCloud | null {
+  const s = asSprite(obj);
+  if (s && "fog" in s) return s as FogCloud;
   return null;
 }
 
@@ -277,6 +301,10 @@ export class GameScene extends Phaser.Scene {
   private rocks!: Phaser.Physics.Arcade.Group;
   private snowballs!: Phaser.Physics.Arcade.Group;
   private skipBombs!: Phaser.Physics.Arcade.Group;
+  private drones!: Phaser.Physics.Arcade.Group;
+  private holes!: Phaser.Physics.Arcade.Group;
+  private mines!: Phaser.Physics.Arcade.Group;
+  private fogs!: Phaser.Physics.Arcade.Group;
   private fx!: Phaser.Physics.Arcade.Group;
   private decor!: Phaser.GameObjects.Group;
 
@@ -450,6 +478,26 @@ export class GameScene extends Phaser.Scene {
       maxSize: 4,
       runChildUpdate: true,
     });
+    this.drones = this.physics.add.group({
+      classType: AllyDrone,
+      maxSize: 2,
+      runChildUpdate: true,
+    });
+    this.holes = this.physics.add.group({
+      classType: BlackHole,
+      maxSize: 3,
+      runChildUpdate: true,
+    });
+    this.mines = this.physics.add.group({
+      classType: LunarMine,
+      maxSize: 3,
+      runChildUpdate: true,
+    });
+    this.fogs = this.physics.add.group({
+      classType: FogCloud,
+      maxSize: 3,
+      runChildUpdate: true,
+    });
     this.fx = this.physics.add.group({
       classType: FxSprite,
       maxSize: 20,
@@ -497,6 +545,11 @@ export class GameScene extends Phaser.Scene {
       const wave = asShock(a) ?? asShock(b);
       const truck = asTruck(a) ?? asTruck(b);
       if (wave && truck) this.hitShockGround(wave, truck);
+    });
+    this.physics.add.overlap(this.fogs, this.enemies, (a, b) => {
+      const fog = asFog(a) ?? asFog(b);
+      const enemy = asEnemy(a) ?? asEnemy(b);
+      if (fog && enemy) this.hitFogAir(fog, enemy);
     });
     this.physics.add.overlap(this.rollerGroup, this.trucks, (a, b) => {
       const roller = asRoller(a) ?? asRoller(b);
@@ -670,6 +723,9 @@ export class GameScene extends Phaser.Scene {
       this.rocksFall();
       this.snowballsRun();
       this.skipBombsRun();
+      this.dronesHunt(dt);
+      this.holesRun(dt);
+      this.minesWatch();
       this.steerDarts();
       this.steerDecoys();
       this.lockMissiles();
@@ -734,6 +790,10 @@ export class GameScene extends Phaser.Scene {
       this.rocks,
       this.snowballs,
       this.skipBombs,
+      this.drones,
+      this.holes,
+      this.mines,
+      this.fogs,
       this.fx,
     ];
     for (const g of groups) {
@@ -1303,6 +1363,20 @@ export class GameScene extends Phaser.Scene {
     audio.spark();
   }
 
+  private hitFogAir(_fog: FogCloud, enemy: EnemyFighter) {
+    if (!enemy.active || enemy.falling) return;
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.boom();
+      if (enemy.hp > 0) return;
+      this.killEnemy(enemy, false, true);
+      return;
+    }
+    enemy.knockDown();
+    audio.spark();
+  }
+
   private hitShockGround(_wave: Shockwave, truck: Truck) {
     if (!truck.active) return;
     this.killTruck(truck);
@@ -1494,7 +1568,11 @@ export class GameScene extends Phaser.Scene {
       this.bolts.countActive(true) > 0 ||
       this.rocks.countActive(true) > 0 ||
       this.snowballs.countActive(true) > 0 ||
-      this.skipBombs.countActive(true) > 0
+      this.skipBombs.countActive(true) > 0 ||
+      this.drones.countActive(true) > 0 ||
+      this.holes.countActive(true) > 0 ||
+      this.mines.countActive(true) > 0 ||
+      this.fogs.countActive(true) > 0
     );
   }
 
@@ -1510,7 +1588,15 @@ export class GameScene extends Phaser.Scene {
             ? "SNOW"
             : this.kit.pickup === "skip"
               ? "SKIP"
-              : "CALL";
+              : this.kit.pickup === "drone"
+                ? "DRONE"
+                : this.kit.pickup === "hole"
+                  ? "HOLE"
+                  : this.kit.pickup === "mine"
+                    ? "MINE"
+                    : this.kit.pickup === "fog"
+                      ? "FOG"
+                      : "CALL";
     crate?.drop(x, -36, CRATE_FALL_SPEED * (this.kit.grav ?? 1), label, "ally");
   }
 
@@ -1519,6 +1605,10 @@ export class GameScene extends Phaser.Scene {
     else if (this.kit.pickup === "avalanche") this.fireAvalanche();
     else if (this.kit.pickup === "snow") this.fireSnow();
     else if (this.kit.pickup === "skip") this.fireSkip();
+    else if (this.kit.pickup === "drone") this.fireDrone();
+    else if (this.kit.pickup === "hole") this.fireHole();
+    else if (this.kit.pickup === "mine") this.fireMine();
+    else if (this.kit.pickup === "fog") this.fireFog();
     else this.callAlly();
   }
 
@@ -1664,6 +1754,116 @@ export class GameScene extends Phaser.Scene {
     audio.boom();
   }
 
+  private fireDrone() {
+    const x = this.player.x + 36;
+    const y = this.player.y - 8;
+    const drone = this.drones.get(x, y) as AllyDrone | null;
+    if (!drone) return;
+    drone.launch(x, y);
+    audio.pickup();
+  }
+
+  private nearestMark(x: number, y: number): EnemyFighter | Truck | null {
+    let best: EnemyFighter | Truck | null = null;
+    let bestD = 9999;
+    for (const child of this.enemies.getChildren()) {
+      const en = child as EnemyFighter;
+      if (!en.active || en.falling) continue;
+      const d = Phaser.Math.Distance.Between(x, y, en.x, en.y);
+      if (d < bestD) {
+        bestD = d;
+        best = en;
+      }
+    }
+    for (const child of this.trucks.getChildren()) {
+      const t = child as Truck;
+      if (!t.active) continue;
+      const d = Phaser.Math.Distance.Between(x, y, t.x, t.y - 48);
+      if (d < bestD) {
+        bestD = d;
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  private dronesHunt(dt: number) {
+    for (const child of this.drones.getChildren()) {
+      const drone = child as AllyDrone;
+      if (!drone.active) continue;
+      drone.shotAcc = Math.max(0, drone.shotAcc - dt);
+      let vx = 420;
+      let vy = -50;
+      const mark = drone.leaving ? null : this.nearestMark(drone.x, drone.y);
+      if (!drone.leaving && !mark) drone.leaving = true;
+      if (mark && !drone.leaving) {
+        const truck = asTruck(mark);
+        const ty = truck ? truck.y - 48 : mark.y;
+        const dx = mark.x - drone.x;
+        const dy = ty - drone.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        vx = (dx / dist) * DRONE_SPEED;
+        vy = (dy / dist) * DRONE_SPEED;
+        for (const shot of this.eBullets.getChildren()) {
+          const b = shot as Phaser.Physics.Arcade.Sprite;
+          if (!b.active) continue;
+          const bx = drone.x - b.x;
+          const by = drone.y - b.y;
+          const bd = Math.hypot(bx, by);
+          if (bd < 108 && bd > 1) {
+            const w = (1 - bd / 108) * DRONE_DODGE;
+            vx += (bx / bd) * w;
+            vy += (by / bd) * w;
+          }
+        }
+        if (dist < DRONE_RANGE && drone.shotAcc <= 0) {
+          drone.shotAcc = DRONE_FIRE;
+          const ang = Math.atan2(dy, dx);
+          const shot = this.bullets.get(drone.x, drone.y) as Bullet | null;
+          if (shot) {
+            shot.fire(drone.x + 12, drone.y, true, { scale: 0.3, tint: 0xffc56a });
+            shot.setVelocity(Math.cos(ang) * 820, Math.sin(ang) * 820);
+            shot.setRotation(ang);
+          }
+          this.playFx(drone.x + 16, drone.y, "hit");
+          audio.spark();
+          if (dist < DRONE_RANGE) {
+            this.droneKill(mark);
+            drone.leaving = true;
+            vx = 440;
+            vy = -60;
+          }
+        }
+      }
+      drone.setFlipX(vx < -20);
+      drone.setVelocity(vx, vy);
+      if (this.hm) {
+        const floor = this.waterLine(this.worldX + drone.x) - 28;
+        const ceil = this.chm
+          ? ceilingY(this.worldX + drone.x, this.chm) + 22
+          : this.yMin;
+        drone.y = Phaser.Math.Clamp(drone.y, ceil, floor);
+      }
+    }
+  }
+
+  private droneKill(mark: EnemyFighter | Truck) {
+    const truck = asTruck(mark);
+    if (truck) {
+      if (truck.active) this.killTruck(truck);
+      return;
+    }
+    const enemy = mark as EnemyFighter;
+    if (!enemy.active) return;
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.spark();
+      if (enemy.hp > 0) return;
+    }
+    this.killEnemy(enemy, false, true);
+  }
+
   private fireTorpedo() {
     const x = this.player.x + 18;
     const y = this.player.y + 22;
@@ -1699,6 +1899,125 @@ export class GameScene extends Phaser.Scene {
     this.killTruck(truck);
     this.playFx(x, y, "blast");
     audio.boom();
+  }
+
+  private fireHole() {
+    const x = this.player.x + 52;
+    const y = this.player.y + 8;
+    const hole = this.holes.get(x, y) as BlackHole | null;
+    if (!hole) return;
+    hole.drop(x, y, this.kit.grav ?? 1);
+    audio.bombDrop();
+  }
+
+  private holesRun(dt: number) {
+    if (!this.hm) return;
+    for (const child of this.holes.getChildren()) {
+      const hole = child as BlackHole;
+      if (!hole.active) continue;
+      const gy = this.waterLine(this.worldX + hole.x) - 18;
+      if (!hole.spinning) {
+        if (hole.y >= gy) {
+          hole.y = gy;
+          hole.spin();
+          audio.boom();
+          this.trauma = Math.min(1, this.trauma + 0.16);
+        }
+        continue;
+      }
+      hole.y = gy;
+      hole.setVelocity(-this.scroll, 0);
+      this.holePull(hole, dt);
+    }
+  }
+
+  private holePull(hole: BlackHole, dt: number) {
+    for (const child of this.trucks.getChildren()) {
+      const truck = child as Truck;
+      if (!truck.active) continue;
+      const ty = truck.y - 40;
+      const dx = hole.x - truck.x;
+      const dy = hole.y - ty;
+      const dist = Math.hypot(dx, dy);
+      if (dist > HOLE_PULL || dist < 1) continue;
+      const pull = Math.min(520, 280 + (1 - dist / HOLE_PULL) * 420) * dt;
+      truck.x += (dx / dist) * pull;
+      truck.y += (dy / dist) * pull * 0.35;
+      if (dist < HOLE_KILL) this.holeEatGround(truck);
+    }
+    for (const child of this.enemies.getChildren()) {
+      const en = child as EnemyFighter;
+      if (!en.active || en.falling) continue;
+      if (Math.abs(en.x - hole.x) > HOLE_AIR_W) continue;
+      if (en.y > hole.y + 12) continue;
+      const dx = hole.x - en.x;
+      const dy = hole.y - en.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      en.setVelocity((dx / dist) * 240, (dy / dist) * 320);
+      if (dist < HOLE_KILL + 18) this.holeEatAir(en);
+    }
+  }
+
+  private holeEatGround(truck: Truck) {
+    if (!truck.active) return;
+    const x = truck.x;
+    const y = truck.y - 20;
+    this.killTruck(truck);
+    this.playFx(x, y, "blast");
+    audio.boom();
+  }
+
+  private holeEatAir(enemy: EnemyFighter) {
+    if (!enemy.active) return;
+    if (enemy.kind === "boss") {
+      enemy.hp -= 4;
+      this.playFx(enemy.x, enemy.y, "hit");
+      audio.spark();
+      if (enemy.hp > 0) return;
+    }
+    this.killEnemy(enemy, false, true);
+  }
+
+  private fireMine() {
+    const x = this.player.x + 48;
+    const y = this.player.y;
+    const mine = this.mines.get(x, y) as LunarMine | null;
+    if (!mine) return;
+    mine.launch(x, y);
+    audio.bombDrop();
+  }
+
+  private fireFog() {
+    const x = this.player.x + 56;
+    const y = this.player.y - 4;
+    const fog = this.fogs.get(x, y) as FogCloud | null;
+    if (!fog) return;
+    fog.puff(x, y);
+    audio.pickup();
+  }
+
+  private minesWatch() {
+    for (const child of this.mines.getChildren()) {
+      const mine = child as LunarMine;
+      if (!mine.active) continue;
+      for (const eChild of this.enemies.getChildren()) {
+        const en = eChild as EnemyFighter;
+        if (!en.active || en.falling) continue;
+        const dist = Phaser.Math.Distance.Between(mine.x, mine.y, en.x, en.y);
+        if (dist > MINE_RANGE) continue;
+        if (en.kind === "boss") {
+          if (mine.biteAcc > 0) continue;
+          mine.biteAcc = 0.45;
+          en.hp -= 4;
+          this.playFx(en.x, en.y, "hit");
+          audio.spark();
+          if (en.hp > 0) continue;
+        }
+        this.playFx(en.x, en.y, "blast");
+        audio.boom();
+        this.killEnemy(en, false, true);
+      }
+    }
   }
 
   private callAlly() {

@@ -21,6 +21,14 @@ import {
   SKIP_MAX,
   SKIP_SCALE,
   SKIP_SPEED,
+  DRONE_LIFE,
+  HOLE_LIFE,
+  HOLE_THROW,
+  MINE_LIFE,
+  MINE_THROW,
+  FOG_LIFE,
+  FOG_SCALE,
+  FOG_THROW,
   TORPEDO_LIFE,
   TORPEDO_SPEED,
   ENEMY_BULLET_SPEED,
@@ -650,6 +658,10 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     const rock = label === "ROCK";
     const snow = label === "SNOW";
     const skip = label === "SKIP";
+    const drone = label === "DRONE";
+    const hole = label === "HOLE";
+    const mine = label === "MINE";
+    const fog = label === "FOG";
     const laser = label === "BURST";
     const badgeKey = ally
       ? "ally-tank"
@@ -661,20 +673,34 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
             ? "snowball"
             : skip
               ? "skip-bomb"
-              : laser
-                ? "laser-bolt"
-                : "bomb";
+              : drone
+                ? "ally-drone"
+                : hole
+                  ? "black-hole"
+                  : mine
+                    ? "lunar-mine"
+                    : fog
+                      ? "fog-cloud"
+                      : laser
+                        ? "laser-bolt"
+                        : "bomb";
     if (!this.badge) {
       this.badge = this.scene.add.sprite(this.x, this.y, badgeKey, 0);
       this.badge.setDepth(59);
     }
     this.badge.setTexture(badgeKey);
-    this.badge.setScale(ally ? 0.28 : torp ? 0.4 : rock ? 0.32 : snow ? 0.14 : skip ? 0.14 : laser ? 0.55 : 0.34);
+    this.badge.setScale(
+      ally ? 0.28 : torp ? 0.4 : rock ? 0.32 : snow || skip || drone || hole || mine || fog ? 0.14 : laser ? 0.55 : 0.34,
+    );
     this.badge.setVisible(true);
     if (torp) this.badge.play("torpedo-run", true);
     else if (rock) this.badge.play("canyon-rock-tumble", true);
     else if (snow) this.badge.play("snowball-roll", true);
     else if (skip) this.badge.play("skip-bomb-spin", true);
+    else if (drone) this.badge.play("ally-drone-fly", true);
+    else if (hole) this.badge.play("black-hole-spin", true);
+    else if (mine) this.badge.play("lunar-mine-float", true);
+    else if (fog) this.badge.play("fog-cloud-drift", true);
     else if (!laser && !ally) this.badge.play("bomb-spin", true);
     else this.badge.anims.stop();
     if (!this.tag) {
@@ -934,6 +960,178 @@ export class SkipBomb extends Phaser.Physics.Arcade.Sprite {
     if (!this.active) return;
     this.life -= delta / 1000;
     if (this.life <= 0 || this.x > 1420 || this.y > 820) this.disableBody(true, true);
+  }
+}
+
+export class AllyDrone extends Phaser.Physics.Arcade.Sprite {
+  drone = true;
+  leaving = false;
+  shotAcc = 0.12;
+  life = DRONE_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "ally-drone");
+  }
+
+  launch(x: number, y: number) {
+    this.leaving = false;
+    this.shotAcc = 0.12;
+    this.life = DRONE_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(66);
+    this.clearTint();
+    this.setOrigin(0.5, 0.5);
+    this.setScale(0.38);
+    this.setFlipX(false);
+    this.setVelocity(220, -40);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setSize(88, 64).setOffset(84, 96);
+    this.play("ally-drone-fly", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    this.life -= delta / 1000;
+    if (this.life <= 0 || this.x > 1420 || this.x < -120 || this.y < -60 || this.y > 800) {
+      this.disableBody(true, true);
+    }
+  }
+}
+
+export class BlackHole extends Phaser.Physics.Arcade.Sprite {
+  hole = true;
+  spinning = false;
+  life = HOLE_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "black-hole");
+  }
+
+  drop(x: number, y: number, grav = 1) {
+    this.spinning = false;
+    this.life = HOLE_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(54);
+    this.clearTint();
+    this.setAlpha(1);
+    this.setOrigin(0.5, 0.5);
+    this.setScale(0.48);
+    this.setVelocity(HOLE_THROW, 70 * grav);
+    this.setAngularVelocity(0);
+    const body = bodyOf(this);
+    body?.setAllowGravity(true);
+    body?.setGravityY(BOMB_GRAVITY * grav);
+    body?.setSize(120, 120).setOffset(68, 68);
+    this.play("black-hole-spin", true);
+  }
+
+  spin() {
+    this.spinning = true;
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setGravityY(0);
+    this.setVelocity(0, 0);
+    this.setAngularVelocity(0);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    if (this.spinning) {
+      this.life -= delta / 1000;
+      if (this.life < 0.5) this.setAlpha(Math.max(0, this.life / 0.5));
+      if (this.life <= 0) this.disableBody(true, true);
+    }
+    if (this.x < -160 || this.x > 1400 || this.y > 820) this.disableBody(true, true);
+  }
+}
+
+export class LunarMine extends Phaser.Physics.Arcade.Sprite {
+  mine = true;
+  biteAcc = 0;
+  bob = 0;
+  life = MINE_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "lunar-mine");
+  }
+
+  launch(x: number, y: number) {
+    this.biteAcc = 0;
+    this.bob = 0;
+    this.life = MINE_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(62);
+    this.clearTint();
+    this.setAlpha(1);
+    this.setOrigin(0.5, 0.5);
+    this.setScale(0.34);
+    this.setVelocity(MINE_THROW, -18);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setGravityY(0);
+    body?.setSize(72, 72).setOffset(92, 92);
+    this.play("lunar-mine-float", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    const dt = delta / 1000;
+    this.life -= dt;
+    this.biteAcc = Math.max(0, this.biteAcc - dt);
+    this.bob += dt;
+    const body = bodyOf(this);
+    const vx = (body?.velocity.x ?? 0) * Math.pow(0.12, dt);
+    const hang = Math.abs(vx) < 22;
+    this.setVelocity(hang ? 0 : vx, hang ? Math.sin(this.bob * 3.2) * 22 : -10);
+    if (this.life < 0.55) this.setAlpha(Math.max(0, this.life / 0.55));
+    if (this.life <= 0 || this.x > 1420 || this.x < -80 || this.y < -40 || this.y > 780) {
+      this.disableBody(true, true);
+    }
+  }
+}
+
+export class FogCloud extends Phaser.Physics.Arcade.Sprite {
+  fog = true;
+  life = FOG_LIFE;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, "fog-cloud");
+  }
+
+  puff(x: number, y: number) {
+    this.life = FOG_LIFE;
+    this.enableBody(true, x, y, true, true);
+    this.setDepth(58);
+    this.clearTint();
+    this.setAlpha(0.92);
+    this.setOrigin(0.5, 0.5);
+    this.setScale(0.42);
+    this.setVelocity(FOG_THROW, -8);
+    const body = bodyOf(this);
+    body?.setAllowGravity(false);
+    body?.setGravityY(0);
+    body?.setSize(140, 110).setOffset(58, 72);
+    this.play("fog-cloud-drift", true);
+  }
+
+  preUpdate(time: number, delta: number) {
+    super.preUpdate(time, delta);
+    if (!this.active) return;
+    const dt = delta / 1000;
+    this.life -= dt;
+    const body = bodyOf(this);
+    const vx = (body?.velocity.x ?? 0) * Math.pow(0.08, dt);
+    this.setVelocity(Math.abs(vx) < 18 ? 8 : vx, Math.sin(this.life * 2.4) * 12);
+    const grow = Math.min(FOG_SCALE, 0.42 + (FOG_LIFE - this.life) * 0.14);
+    this.setScale(grow);
+    const hit = 90 + grow * 90;
+    bodyOf(this)?.setSize(hit, hit * 0.78).setOffset(128 - hit / 2, 128 - (hit * 0.78) / 2);
+    if (this.life < 0.7) this.setAlpha(Math.max(0, this.life / 0.7));
+    if (this.life <= 0 || this.x > 1400 || this.x < -100) this.disableBody(true, true);
   }
 }
 
