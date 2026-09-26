@@ -69,6 +69,9 @@ export const MINE_RANGE = 92;
 export const FOG_THROW = 260;
 export const FOG_LIFE = 3.4;
 export const FOG_SCALE = 0.72;
+export const SHIELD_LIFE = 3.6;
+export const SHIELD_BOUNCE = 820;
+export const SHIELD_RADIUS = 108;
 export const PICKUP_FIRST = 11;
 export const PICKUP_EVERY = 48;
 export const PICKUP_MAX = 2;
@@ -93,4 +96,4 @@ export const SHOCK_SPEED = 460;
 export const ROLLER_LIFE = 4.2;
 export const ROLLER_SPEED = 280;
 
-export const ART_REV = 78;
+export const ART_REV = 79;

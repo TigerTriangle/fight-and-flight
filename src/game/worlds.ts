@@ -56,7 +56,7 @@ export type StageKit = {
   grav?: number;
   float?: number;
   secondary?: "bomb" | "laser";
-  pickup?: "ally" | "torpedo" | "avalanche" | "snow" | "skip" | "drone" | "hole" | "mine" | "fog";
+  pickup?: "ally" | "torpedo" | "avalanche" | "snow" | "skip" | "drone" | "hole" | "mine" | "fog" | "shield";
   airProj?: "bullet" | "fireball";
   groundSink?: number;
   bankSink?: number;
@@ -571,6 +571,7 @@ const LUMEN_KIT: StageKit = {
   aaShot: 560,
   airProj: "fireball",
   hp: { truck: 11, aa: 14, tank: 22, trainer: 1, fighter: 9, heavy: 11, boss: 42 },
+  pickup: "shield",
 };
 
 export function stageKit(id: string | undefined | null): StageKit {

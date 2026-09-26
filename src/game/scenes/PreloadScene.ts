@@ -77,6 +77,10 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 256,
       frameHeight: 256,
     });
+    this.load.spritesheet("lumen-ward", `/game/lumen-ward.png${v}`, {
+      frameWidth: 256,
+      frameHeight: 256,
+    });
     this.load.spritesheet("radar", `/game/radar.png${v}`, {
       frameWidth: 256,
       frameHeight: 256,
@@ -453,6 +457,12 @@ export class PreloadScene extends Phaser.Scene {
       key: "fog-cloud-drift",
       frames: this.anims.generateFrameNumbers("fog-cloud", { start: 0, end: 3 }),
       frameRate: 8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "lumen-ward-pulse",
+      frames: this.anims.generateFrameNumbers("lumen-ward", { start: 0, end: 3 }),
+      frameRate: 10,
       repeat: -1,
     });
     this.anims.create({

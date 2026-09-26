@@ -43,6 +43,9 @@ import {
   HOLE_KILL,
   HOLE_PULL,
   MINE_RANGE,
+  SHIELD_BOUNCE,
+  SHIELD_LIFE,
+  SHIELD_RADIUS,
   CLOAK_TIME,
 } from "../config";
 import {
@@ -238,6 +241,8 @@ export class GameScene extends Phaser.Scene {
   private pickupMax = 0;
   private pickupCd = 0;
   private cloakT = 0;
+  private shieldT = 0;
+  private ward?: Phaser.GameObjects.Sprite;
   private score = 0;
   private dead = false;
   private gunCd = 0;
@@ -327,6 +332,8 @@ export class GameScene extends Phaser.Scene {
     this.pickupMax = 0;
     this.pickupCd = 0;
     this.cloakT = 0;
+    this.shieldT = 0;
+    this.ward?.setVisible(false);
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
@@ -567,10 +574,15 @@ export class GameScene extends Phaser.Scene {
       if (bullet && flare) this.eatFlare(bullet, flare);
     });
     this.physics.add.overlap(this.eBullets, this.player, (a) => {
-      if (this.cloaked()) return;
       const bullet = asBullet(a);
-      const cause: EndCause = bullet?.fromAa ? "aa" : "air";
-      bullet?.disableBody(true, true);
+      if (!bullet || bullet.fromPlayer) return;
+      if (this.shielded()) {
+        this.bounceShot(bullet);
+        return;
+      }
+      if (this.cloaked()) return;
+      const cause: EndCause = bullet.fromAa ? "aa" : "air";
+      bullet.disableBody(true, true);
       this.hurt(cause);
     });
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
@@ -822,6 +834,8 @@ export class GameScene extends Phaser.Scene {
     this.pickupMax = 0;
     this.pickupCd = 0;
     this.cloakT = 0;
+    this.shieldT = 0;
+    this.ward?.setVisible(false);
     this.score = 0;
     this.dead = false;
     this.gunCd = 0;
@@ -1012,6 +1026,7 @@ export class GameScene extends Phaser.Scene {
 
   private combat(actions: ReturnType<typeof input.sample>, dt: number) {
     this.tickCloak(dt);
+    this.tickShield(dt);
     this.tickGun(actions.fire, dt);
     this.bombCd = Math.max(0, this.bombCd - dt);
     this.specialCd = Math.max(0, this.specialCd - dt);
@@ -1406,6 +1421,10 @@ export class GameScene extends Phaser.Scene {
     return this.cloakT > 0;
   }
 
+  private shielded() {
+    return this.shieldT > 0;
+  }
+
   private tickCloak(dt: number) {
     if (this.cloakT <= 0) return;
     this.cloakT = Math.max(0, this.cloakT - dt);
@@ -1413,6 +1432,77 @@ export class GameScene extends Phaser.Scene {
       this.player.clearTint();
       if (this.invuln <= 0) this.player.setAlpha(1);
     }
+  }
+
+  private tickShield(dt: number) {
+    if (this.ward) {
+      this.ward.x = this.player.x;
+      this.ward.y = this.player.y;
+      this.ward.setVisible(this.shieldT > 0 && this.player.visible && !this.dead);
+    }
+    if (this.shieldT <= 0) return;
+    this.shieldT = Math.max(0, this.shieldT - dt);
+    if (this.ward) this.ward.setAlpha(this.shieldT < 0.5 ? this.shieldT / 0.5 : 0.85);
+    if (this.shieldT <= 0) {
+      this.ward?.setVisible(false);
+      return;
+    }
+    for (const child of this.eBullets.getChildren()) {
+      const shot = child as Bullet;
+      if (!shot.active || shot.fromPlayer) continue;
+      if (Phaser.Math.Distance.Between(shot.x, shot.y, this.player.x, this.player.y) > SHIELD_RADIUS) {
+        continue;
+      }
+      this.bounceShot(shot);
+    }
+  }
+
+  private fireShield() {
+    this.shieldT = SHIELD_LIFE;
+    if (!this.ward) {
+      this.ward = this.add.sprite(this.player.x, this.player.y, "lumen-ward", 0);
+      this.ward.setDepth(64);
+      this.ward.setScale(0.62);
+      this.ward.play("lumen-ward-pulse", true);
+    }
+    this.ward.setVisible(true);
+    this.ward.setAlpha(0.88);
+    this.ward.play("lumen-ward-pulse", true);
+    audio.pickup();
+  }
+
+  private bounceShot(bullet: Bullet) {
+    if (!bullet.active || bullet.fromPlayer) return;
+    const src = bullet.source;
+    const x = bullet.x;
+    const y = bullet.y;
+    const body = bullet.body as Phaser.Physics.Arcade.Body | null;
+    const vx = body?.velocity.x ?? -400;
+    const vy = body?.velocity.y ?? 0;
+    const fireball = bullet.texture.key === "fireball";
+    bullet.disableBody(true, true);
+    let dx = -vx;
+    let dy = -vy;
+    if (src?.active) {
+      dx = src.x - x;
+      dy = src.y - y;
+    }
+    const mag = Math.hypot(dx, dy) || 1;
+    const nx = dx / mag;
+    const ny = dy / mag;
+    const shot = this.bullets.get(x + nx * 28, y + ny * 28) as Bullet | null;
+    if (!shot) return;
+    shot.fire(x + nx * 28, y + ny * 28, true, {
+      dmg: 99,
+      texture: fireball ? "fireball" : "bullet",
+      anim: fireball ? "fireball-fly" : "bullet-fly",
+      scale: fireball ? 0.5 : 0.4,
+      tint: 0xb8fff2,
+    });
+    shot.setVelocity(nx * SHIELD_BOUNCE, ny * SHIELD_BOUNCE);
+    shot.setFlipX(nx < 0);
+    this.playFx(x, y, "hit");
+    audio.spark();
   }
 
   private startCloak() {
@@ -1572,7 +1662,8 @@ export class GameScene extends Phaser.Scene {
       this.drones.countActive(true) > 0 ||
       this.holes.countActive(true) > 0 ||
       this.mines.countActive(true) > 0 ||
-      this.fogs.countActive(true) > 0
+      this.fogs.countActive(true) > 0 ||
+      this.shieldT > 0
     );
   }
 
@@ -1596,7 +1687,9 @@ export class GameScene extends Phaser.Scene {
                     ? "MINE"
                     : this.kit.pickup === "fog"
                       ? "FOG"
-                      : "CALL";
+                      : this.kit.pickup === "shield"
+                        ? "SHIELD"
+                        : "CALL";
     crate?.drop(x, -36, CRATE_FALL_SPEED * (this.kit.grav ?? 1), label, "ally");
   }
 
@@ -1609,6 +1702,7 @@ export class GameScene extends Phaser.Scene {
     else if (this.kit.pickup === "hole") this.fireHole();
     else if (this.kit.pickup === "mine") this.fireMine();
     else if (this.kit.pickup === "fog") this.fireFog();
+    else if (this.kit.pickup === "shield") this.fireShield();
     else this.callAlly();
   }
 
@@ -2314,11 +2408,11 @@ export class GameScene extends Phaser.Scene {
         const b = this.eBullets.get(mx, my) as Bullet | null;
         if (!b) continue;
         if (spit) {
-          b.fire(mx, my, false, { texture: "fireball", anim: "fireball-fly", scale: 0.48 });
+          b.fire(mx, my, false, { texture: "fireball", anim: "fireball-fly", scale: 0.48, source: en });
           const evx = (en.body as Phaser.Physics.Arcade.Body | null)?.velocity.x ?? -220;
           b.setVelocity(Math.min(-ENEMY_BULLET_SPEED, evx - 180), 0);
         } else {
-          b.fire(mx, my, false);
+          b.fire(mx, my, false, { source: en });
           const evx = (en.body as Phaser.Physics.Arcade.Body | null)?.velocity.x ?? -220;
           b.setVelocity(Math.min(-ENEMY_BULLET_SPEED, evx - 220), 0);
         }
@@ -2340,7 +2434,7 @@ export class GameScene extends Phaser.Scene {
       const muzzleY = truck.y - 128;
       const b = this.eBullets.get(truck.x - 10, muzzleY) as Bullet | null;
       if (!b) continue;
-      b.fire(truck.x - 10, muzzleY, false, { fromAa: true });
+      b.fire(truck.x - 10, muzzleY, false, { fromAa: true, source: truck });
       const bait = this.nearestFlare(truck.x, muzzleY);
       const px = bait?.x ?? this.player?.x ?? 200;
       const py = bait?.y ?? this.player?.y ?? 200;

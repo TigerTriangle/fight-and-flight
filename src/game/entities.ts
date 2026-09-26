@@ -56,6 +56,7 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
   dmg = 1;
   weave = 0;
   weaveT = 0;
+  source: Phaser.Physics.Arcade.Sprite | null = null;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, "bullet");
@@ -65,13 +66,23 @@ export class Bullet extends Phaser.Physics.Arcade.Sprite {
     x: number,
     y: number,
     fromPlayer: boolean,
-    opts?: { dmg?: number; scale?: number; tint?: number; weave?: number; fromAa?: boolean; texture?: string; anim?: string },
+    opts?: {
+      dmg?: number;
+      scale?: number;
+      tint?: number;
+      weave?: number;
+      fromAa?: boolean;
+      texture?: string;
+      anim?: string;
+      source?: Phaser.Physics.Arcade.Sprite;
+    },
   ) {
     this.fromPlayer = fromPlayer;
     this.fromAa = !fromPlayer && !!opts?.fromAa;
     this.dmg = fromPlayer ? (opts?.dmg ?? 1) : 1;
     this.weave = fromPlayer ? (opts?.weave ?? 0) : 0;
     this.weaveT = 0;
+    this.source = fromPlayer ? null : (opts?.source ?? null);
     this.enableBody(true, x, y, true, true);
     this.setDepth(70);
     const tex = opts?.texture ?? "bullet";
@@ -662,6 +673,7 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     const hole = label === "HOLE";
     const mine = label === "MINE";
     const fog = label === "FOG";
+    const shield = label === "SHIELD";
     const laser = label === "BURST";
     const badgeKey = ally
       ? "ally-tank"
@@ -681,16 +693,18 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
                     ? "lunar-mine"
                     : fog
                       ? "fog-cloud"
-                      : laser
-                        ? "laser-bolt"
-                        : "bomb";
+                      : shield
+                        ? "lumen-ward"
+                        : laser
+                          ? "laser-bolt"
+                          : "bomb";
     if (!this.badge) {
       this.badge = this.scene.add.sprite(this.x, this.y, badgeKey, 0);
       this.badge.setDepth(59);
     }
     this.badge.setTexture(badgeKey);
     this.badge.setScale(
-      ally ? 0.28 : torp ? 0.4 : rock ? 0.32 : snow || skip || drone || hole || mine || fog ? 0.14 : laser ? 0.55 : 0.34,
+      ally ? 0.28 : torp ? 0.4 : rock ? 0.32 : snow || skip || drone || hole || mine || fog || shield ? 0.14 : laser ? 0.55 : 0.34,
     );
     this.badge.setVisible(true);
     if (torp) this.badge.play("torpedo-run", true);
@@ -701,6 +715,7 @@ export class CrateDrop extends Phaser.Physics.Arcade.Sprite {
     else if (hole) this.badge.play("black-hole-spin", true);
     else if (mine) this.badge.play("lunar-mine-float", true);
     else if (fog) this.badge.play("fog-cloud-drift", true);
+    else if (shield) this.badge.play("lumen-ward-pulse", true);
     else if (!laser && !ally) this.badge.play("bomb-spin", true);
     else this.badge.anims.stop();
     if (!this.tag) {
