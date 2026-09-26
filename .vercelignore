@@ -1,0 +1,8 @@
+node_modules
+.git
+.grok
+.vercel
+assets
+screenshots
+artifacts
+attachments
